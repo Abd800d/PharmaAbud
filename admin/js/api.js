@@ -34,6 +34,26 @@ async function request(method, path, { body, form, params } = {}) {
   return data;
 }
 
+async function downloadCsv(path, params = {}) {
+  let url = API_BASE + path;
+  if (params) {
+    const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ""));
+    if ([...qs].length) url += "?" + qs.toString();
+  }
+  const headers = {};
+  if (token()) headers["Authorization"] = "Bearer " + token();
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error(`Export failed (${res.status})`);
+  const blob = await res.blob();
+  const cd = res.headers.get("content-disposition") || "";
+  const name = (cd.match(/filename=([^;]+)/) || [, "aph_export.csv"])[1].replace(/"/g, "");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 export const api = {
   login: (email, password) => request("POST", "/auth/login", { body: { email, password } }),
   me: () => request("GET", "/auth/me"),
@@ -97,4 +117,11 @@ export const api = {
   roles: () => request("GET", "/users/roles"),
   setUserRoles: (id, role_codes) => request("PUT", `/users/${id}/roles`, { body: { role_codes } }),
   auditLogs: (params = {}) => request("GET", "/audit-logs", { params }),
+  exportAuditCsv: (params = {}) => downloadCsv("/audit-logs/export.csv", params),
+  reports: () => request("GET", "/reports"),
+  report: (id) => request("GET", `/reports/${id}`),
+  exportReportCsv: (id) => downloadCsv(`/reports/${id}/export.csv`),
+  compare: (ids) => request("GET", "/drugs/compare", { params: { ids } }),
+  drugSearch: (q, limit = 8) => request("GET", "/search", { params: { q, kinds: "drug", limit } }),
+};
 };

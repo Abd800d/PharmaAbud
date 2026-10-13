@@ -128,6 +128,7 @@ def data_quality(db: Session = Depends(get_db)) -> dict:
         "score": report.score,
         "score_note": "Data completeness indicator only — NOT a medical reliability score (§57).",
         "total_records": report.total_records,
+        "metrics": report.metrics,
         "summary": report.summary,
         "issues": [{
             "code": i.code, "severity": i.severity, "entity_type": i.entity_type,

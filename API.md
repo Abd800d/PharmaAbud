@@ -106,6 +106,34 @@ curl -X POST localhost:8000/api/v1/auth/login \
 | GET | `/drug-requests?status=` | review queue |
 | PATCH | `/drug-requests/{id}?status=&resolution_notes=` | workflow: submitted → in_review → researching → pending_pharmacist_review → approved → published or rejected |
 
+## Compare (§79–§81)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/drugs/compare?ids=a&ids=b[&ids=c][&ids=d]` | side-by-side comparison of 2–4 drugs: aligned field rows with `identical` flags. **Not** a therapeutic recommendation; **not** substitution advice. |
+
+## Reports (§96)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/reports` | catalog of the 8 reports |
+| GET | `/reports/review-queue` | pending drugs/products, needs_update, unpublished imports |
+| GET | `/reports/source-coverage` | per-drug source counts + coverage % |
+| GET | `/reports/duplicate-candidates` | Exact/Possible/Potential rows (never auto-merged) |
+| GET | `/reports/quality-by-drug` | per-drug missing-field breakdown |
+| GET | `/reports/task-completion` | import batches with completion % |
+| GET | `/reports/drugs-needing-update` | records flagged `needs_update` |
+| GET | `/reports/drugs-without-sources` | zero linked sources (not publishable) |
+| GET | `/reports/unverified-fields` | unverified counts + empty critical sections |
+| GET | `/reports/{id}/export.csv` | CSV export — requires `data.export`, audit-logged |
+
+## Audit logs (§29, §95)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/audit-logs` | filters: `action` (contains), `entity_type`, `entity_id`, `user_id`, `date_from`, `date_to`; `sort=asc\|desc`; paging. Requires `audit.read`. Append-only — no write/delete endpoints exist. |
+| GET | `/audit-logs/export.csv` | CSV export of the filtered trail — requires `data.export`, audit-logged |
+
 ## Products — `/products`
 
 | Method | Path | Permission | Description |

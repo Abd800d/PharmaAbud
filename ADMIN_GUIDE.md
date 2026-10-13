@@ -52,17 +52,33 @@ Pending images with product, source, uploader, date · Approve / Reject.
 Automated checks: missing generic name, missing strength, invalid dosage
 form, missing manufacturer, duplicate product, missing source, unverified
 source, missing Arabic/English translation, broken image, invalid barcode,
-conflicting classification, expired verification. The score measures
+conflicting classification, expired verification. The dashboard also shows
+the §57 metric counters: missing sources, unverified content, duplicate
+candidates, missing images, missing dosage/interactions/pregnancy sections,
+missing brand/generic names, missing Arabic translations. The score measures
 **completeness only — NOT medical reliability**.
+
+### Reports (§96)
+Eight downloadable reports: Review Queue · Source Coverage · Duplicate
+Candidates · Quality by Drug · Task Completion · Drugs Needing Update ·
+Drugs Without Sources · Unverified Fields. Each has an **Export CSV** button
+(`data.export` permission; every export is audit-logged).
+
+### Compare (§79–§81)
+Side-by-side comparison of 2–4 drug records with differences highlighted.
+The comparison shows **differences and equivalences between records only** —
+it is NOT a therapeutic recommendation and NOT substitution advice.
+“Equivalent Product” never means clinically interchangeable.
 
 ### Users & Roles (§28)
 Assign the 7 roles (public_user, pharmacist_reviewer, data_manager,
 image_reviewer, translator, administrator, super_administrator). Role changes
 are audit-logged.
 
-### Audit Logs (§29)
-Filter by action / entity type / entity id. **Append-only** — nobody can
-modify or delete entries through the API.
+### Audit Logs (§29, §95)
+Filter by action (contains) / entity type / entity id / user id / date range;
+sortable oldest/newest; paginated; **Export CSV** available. **Append-only** —
+nobody can modify or delete entries through the API; no write endpoints exist.
 
 ### Exports (§82)
 Filtered CSV/JSON export (`data.export` permission) — large exports are

@@ -17,6 +17,17 @@ export async function renderQuality(root) {
       <div class="stat amber"><div class="label">Warnings</div><div class="value">${bySeverity.warning}</div></div>
       <div class="stat"><div class="label">Info</div><div class="value">${bySeverity.info}</div></div>
     </div>
+    ${q.metrics ? `
+    <div class="card">
+      <h3>Dashboard Metrics (§57)</h3>
+      <div class="stat-grid">
+        ${Object.entries(q.metrics).map(([k, v]) => `
+          <div class="stat ${v > 0 ? "amber" : "green"}">
+            <div class="label">${esc(k.replace(/_/g, " "))}</div>
+            <div class="value">${v}</div>
+          </div>`).join("")}
+      </div>
+    </div>` : ""}
     <div class="chart-row">
       <div class="card">
         <h3>Issues by Type</h3>
@@ -108,22 +119,44 @@ export async function renderUsers(root) {
 /* ------------------------------------------------------------- audit */
 export async function renderAudit(root) {
   root.innerHTML = `
-    <div class="note">Append-only audit trail (§29). Ordinary users can never modify or delete these entries. Filters: action, entity type, entity id.</div>
+    <div class="note">Append-only audit trail (§29, §95). Ordinary users can never modify or delete these entries. Filters: action, entity, user, date range. Exports are audit-logged (§82).</div>
     <div class="toolbar">
       <input id="audit-action" placeholder="action e.g. drug.updated" />
       <input id="audit-entity" placeholder="entity type e.g. drug" />
       <input id="audit-eid" placeholder="entity id" />
+      <input id="audit-user" placeholder="user id" />
+      <input id="audit-from" type="date" title="From date" />
+      <input id="audit-to" type="date" title="To date" />
+      <select id="audit-sort"><option value="desc">Newest first</option><option value="asc">Oldest first</option></select>
       <button class="btn btn-secondary" id="audit-search">Filter</button>
+      <button class="btn" id="audit-export">Export CSV</button>
     </div>
     <div id="audit-list"></div>
+    <div class="toolbar" style="margin-top:10px">
+      <button class="btn btn-secondary" id="audit-prev">← Prev</button>
+      <span id="audit-page" class="muted"></span>
+      <button class="btn btn-secondary" id="audit-next">Next →</button>
+    </div>
   `;
-  async function load() {
-    const data = await api.auditLogs({
+  let page = 1;
+  function params() {
+    const from = root.querySelector("#audit-from").value;
+    const to = root.querySelector("#audit-to").value;
+    return {
       action: root.querySelector("#audit-action").value.trim(),
       entity_type: root.querySelector("#audit-entity").value.trim(),
       entity_id: root.querySelector("#audit-eid").value.trim(),
-      limit: 100,
-    });
+      user_id: root.querySelector("#audit-user").value.trim(),
+      date_from: from ? new Date(from).toISOString() : undefined,
+      date_to: to ? new Date(new Date(to).getTime() + 86400000).toISOString() : undefined,
+      sort: root.querySelector("#audit-sort").value,
+      page,
+      page_size: 50,
+    };
+  }
+  async function load() {
+    const data = await api.auditLogs(params());
+    root.querySelector("#audit-page").textContent = `Page ${data.page} · ${data.total} total`;
     root.querySelector("#audit-list").innerHTML = data.items.length ? `
       <table><thead><tr><th>Time</th><th>Action</th><th>Entity</th><th>User</th><th>Change</th></tr></thead>
       <tbody>${data.items.map((a) => `
@@ -137,6 +170,16 @@ export async function renderAudit(root) {
       </tbody></table>
       <p class="muted" style="margin-top:10px">${esc(data.note)}</p>` : emptyState("No audit entries match.");
   }
-  root.querySelector("#audit-search").onclick = load;
+  root.querySelector("#audit-search").onclick = () => { page = 1; load(); };
+  root.querySelector("#audit-prev").onclick = () => { if (page > 1) { page -= 1; load(); } };
+  root.querySelector("#audit-next").onclick = () => { page += 1; load(); };
+  root.querySelector("#audit-export").onclick = async () => {
+    try {
+      await api.exportAuditCsv(params());
+      toast("Audit log exported (audit-logged).");
+    } catch (e) {
+      toast(e.message, true);
+    }
+  };
   await load();
 }

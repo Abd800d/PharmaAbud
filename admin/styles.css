@@ -1,0 +1,12 @@
+
+/* Reports (§96) + Compare (§79-§81) */
+.report-grid { display:flex; flex-wrap:wrap; gap:8px; }
+.report-btn { font-size:13px; }
+.cmp-pick { position:relative; }
+.cmp-results { position:absolute; z-index:20; top:100%; left:0; right:0; background:var(--surface, #fff); border:1px solid var(--border, #d6e2ee); border-radius:8px; box-shadow:0 8px 20px rgba(11,37,69,.12); max-height:220px; overflow:auto; }
+.cmp-result { padding:8px 12px; cursor:pointer; font-size:13px; }
+.cmp-result:hover { background:#eef6fb; }
+.cmp-table td, .cmp-table th { vertical-align:top; }
+.cmp-list { margin:0; padding-left:16px; font-size:12.5px; }
+.cmp-diff td { background:#fff8e6; }
+tr.cmp-diff td:first-child { background:#fff3d1; }

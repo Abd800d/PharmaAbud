@@ -43,7 +43,7 @@ DATABASE_URL="sqlite:///./aph_dev.db" .venv/bin/python -m app.db.init_db
 - Admin dashboard: http://localhost:8000/admin
   (dev login after seeding: `admin@aphdemo.com` / `ChangeMe!123` — **change immediately**)
 
-Run the test suite (72 tests):
+Run the test suite (79 tests):
 
 ```bash
 cd backend && .venv/bin/python -m pytest tests/ -q

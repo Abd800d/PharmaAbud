@@ -11,7 +11,17 @@ from typing import Dict, List
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import Drug, Product, ProductImage, Source
+from app.models import (
+    Drug,
+    DrugDosage,
+    DrugInteraction,
+    DrugPregnancy,
+    DrugSource,
+    ImportRow,
+    Product,
+    ProductImage,
+    Source,
+)
 
 
 @dataclass
@@ -30,6 +40,38 @@ class QualityReport:
     issues: List[QualityIssue]
     score: float  # 0-100 completeness score, NOT medical reliability
     summary: Dict[str, int] = field(default_factory=dict)
+    metrics: Dict[str, int] = field(default_factory=dict)  # §57 dashboard metrics
+
+
+def collect_metrics(db: Session) -> Dict[str, int]:
+    """Aggregate data-quality metrics for the dashboard (§57)."""
+    def cnt(stmt) -> int:
+        return db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+
+    dosage_ids = select(DrugDosage.drug_id).distinct()
+    inter_ids = select(DrugInteraction.drug_id).distinct()
+    preg_ids = select(DrugPregnancy.drug_id).distinct()
+    src_ids = select(DrugSource.drug_id).distinct()
+    img_ids = select(ProductImage.product_id).distinct()
+
+    return {
+        "missing_sources": cnt(select(Drug).where(~Drug.id.in_(src_ids))),
+        "unverified_content": cnt(select(Drug).where(Drug.verification_status != "verified"))
+        + cnt(select(Product).where(Product.verification_status != "verified")),
+        "duplicate_candidates": cnt(select(ImportRow).where(ImportRow.duplicate_kind != "")),
+        "missing_images": cnt(select(Product).where(~Product.id.in_(img_ids))),
+        "missing_dosage": cnt(select(Drug).where(~Drug.id.in_(dosage_ids))),
+        "missing_interactions": cnt(select(Drug).where(~Drug.id.in_(inter_ids))),
+        "missing_pregnancy": cnt(select(Drug).where(~Drug.id.in_(preg_ids))),
+        "missing_brand_names": cnt(select(Product).where(
+            (Product.brand_name_en == "") & (Product.brand_name_ar == "")
+        )),
+        "missing_generic_names": cnt(select(Drug).where(
+            (Drug.generic_name_en == "") & (Drug.generic_name_ar == "")
+        )),
+        "missing_arabic_translations": cnt(select(Drug).where(Drug.generic_name_ar == ""))
+        + cnt(select(Product).where(Product.brand_name_ar == "")),
+    }
 
 
 def run_quality_checks(db: Session, limit: int = 500) -> QualityReport:
@@ -101,7 +143,8 @@ def run_quality_checks(db: Session, limit: int = 500) -> QualityReport:
 
     return QualityReport(
         total_records=checked,
-        issues=issues[:500],
+        issues=issues,
         score=round(score, 1),
         summary=summary,
+        metrics=collect_metrics(db),
     )

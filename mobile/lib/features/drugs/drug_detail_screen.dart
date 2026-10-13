@@ -12,6 +12,7 @@ import '../../shared/repositories/aph_repository.dart';
 import '../../shared/widgets/cards.dart';
 import '../../shared/widgets/common.dart';
 import '../../shared/widgets/states.dart';
+import '../compare/compare_screen.dart';
 import '../products/product_detail_screen.dart';
 
 class DrugDetailScreen extends StatefulWidget {
@@ -83,6 +84,16 @@ class _DrugDetailScreenState extends State<DrugDetailScreen> {
         showBrand: false,
         title: drug.genericNameEn,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.compare_arrows),
+            tooltip: 'Compare',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CompareScreen(initialDrugId: widget.drugId),
+              ),
+            ),
+          ),
           IconButton(
             icon: Icon(_isFavorite ? Icons.favorite : Icons.favorite_border,
                 color: _isFavorite ? AphColors.red : null),

@@ -4,11 +4,13 @@ import { toast } from "./ui.js";
 import { renderDashboard, renderDrugs, renderProducts } from "./views_core.js";
 import { renderSystems, renderManufacturers, renderSources, renderImports, renderReview, renderImages } from "./views_data.js";
 import { renderQuality, renderUsers, renderAudit } from "./views_admin.js";
+import { renderReports, renderCompare } from "./views_reports.js";
 
 const routes = {
   dashboard: { title: "Dashboard", render: renderDashboard },
   drugs: { title: "Drugs", render: renderDrugs },
   products: { title: "Products", render: renderProducts },
+  compare: { title: "Compare Drugs", render: renderCompare },
   systems: { title: "Systems & Classes", render: renderSystems },
   manufacturers: { title: "Manufacturers", render: renderManufacturers },
   sources: { title: "Sources", render: renderSources },
@@ -16,6 +18,7 @@ const routes = {
   review: { title: "Review Queue", render: renderReview },
   images: { title: "Image Review", render: renderImages },
   quality: { title: "Data Quality", render: renderQuality },
+  reports: { title: "Reports", render: renderReports },
   users: { title: "Users & Roles", render: renderUsers },
   audit: { title: "Audit Logs", render: renderAudit },
 };

@@ -17,7 +17,6 @@ from app.services.audit import record_audit
 
 users_router = APIRouter(prefix="/users", tags=["users"])
 requests_router = APIRouter(prefix="/drug-requests", tags=["drug-requests"])
-audit_router = APIRouter(prefix="/audit-logs", tags=["audit"])
 
 
 @users_router.get("", response_model=dict, dependencies=[Depends(require_permission("user.manage"))])
@@ -106,22 +105,3 @@ def update_drug_request(request_id: str, status: str = "in_review",
                  previous_value=previous, new_value=status)
     db.flush()
     return Message(message=f"Request status: {previous} → {status}.")
-
-
-@audit_router.get("", response_model=dict, dependencies=[Depends(require_permission("audit.read"))])
-def list_audit_logs(db: Session = Depends(get_db), page: int = 1, limit: int = 50,
-                    action: str = "", entity_type: str = "", entity_id: str = "") -> dict:
-    stmt = select(AuditLog)
-    if action:
-        stmt = stmt.where(AuditLog.action == action)
-    if entity_type:
-        stmt = stmt.where(AuditLog.entity_type == entity_type)
-    if entity_id:
-        stmt = stmt.where(AuditLog.entity_id == entity_id)
-    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
-    rows = db.scalars(stmt.order_by(AuditLog.timestamp.desc()).offset((page - 1) * limit).limit(limit)).all()
-    return {
-        "items": [AuditLogOut.model_validate(r).model_dump() for r in rows],
-        "total": total, "page": page, "limit": limit, "has_more": page * limit < total,
-        "note": "Audit logs are append-only and cannot be modified through the API.",
-    }

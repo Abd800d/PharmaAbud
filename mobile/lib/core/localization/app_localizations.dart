@@ -143,6 +143,19 @@ class AppLocalizations {
       'version': 'Version',
       'databaseVersion': 'Database Version',
       'clearAll': 'Clear All',
+      // compare (§79–§81)
+      'compare': 'Compare',
+      'compareDisclaimer':
+          'Comparison shows differences and equivalences between records only. It is NOT a therapeutic recommendation and NOT substitution advice.',
+      'comparePickTwo': 'Pick two drugs to compare side-by-side.',
+      'differencesAndEquivalences': 'Differences and Equivalences',
+      'compareNotSubstitution':
+          '“Equivalent Product” never means clinically interchangeable. Verify with a qualified healthcare professional before any clinical decision.',
+      'openFullMonograph': 'Open full monograph',
+      'genericName': 'Generic Name',
+      'drugClass': 'Drug Class',
+      'verificationStatus': 'Verification Status',
+      'isDemo': 'Demo Data',
     },
     'ar': {
       'appTitle': 'AbdulmajeedPharma',
@@ -262,6 +275,19 @@ class AppLocalizations {
       'version': 'الإصدار',
       'databaseVersion': 'إصدار قاعدة البيانات',
       'clearAll': 'مسح الكل',
+      // compare (§79–§81)
+      'compare': 'المقارنة',
+      'compareDisclaimer':
+          'المقارنة تُظهر الاختلافات والتشابهات بين السجلات فقط. ليست توصية علاجية وليست نصيحة استبدال.',
+      'comparePickTwo': 'اختر دواءين للمقارنة جنباً إلى جنب.',
+      'differencesAndEquivalences': 'الاختلافات والتشابهات',
+      'compareNotSubstitution':
+          '«المنتج المكافئ» لا يعني أبداً التبادل السريري. تحقق مع مختص صحي مؤهل قبل أي قرار سريري.',
+      'openFullMonograph': 'فتح المنوغراف الكامل',
+      'genericName': 'الاسم العام',
+      'drugClass': 'الصنف الدوائي',
+      'verificationStatus': 'حالة التحقق',
+      'isDemo': 'بيانات تجريبية',
     },
   };
 
