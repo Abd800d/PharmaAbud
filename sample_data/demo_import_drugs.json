@@ -1,0 +1,42 @@
+{
+  "_label": "DEMO / DEVELOPMENT DATA — NOT VERIFIED PHARMACEUTICAL INFORMATION",
+  "_note": "Example JSON drug import. Imported rows enter 'imported_pending_review' and require pharmacist verification before publishing. Dose fields intentionally read 'Not available / Requires verified source'.",
+  "items": [
+    {
+      "GenericName": "Demoxapine",
+      "GenericNameAR": "ديموكسابين",
+      "PharmacologicalClass": "Demo Antidepressants",
+      "BodySystem": "Nervous System",
+      "Mechanism": "DEMO DATA — placeholder mechanism text requiring a verified source.",
+      "Indications": "DEMO DATA — placeholder indication requiring a verified source.",
+      "Dosage": "Not available / Requires verified source",
+      "Pregnancy": "Not available / Requires verified source",
+      "Lactation": "Not available / Requires verified source",
+      "SourceURL": ""
+    },
+    {
+      "GenericName": "Democardil",
+      "GenericNameAR": "ديمو كارديل",
+      "PharmacologicalClass": "Demo Antihypertensives",
+      "BodySystem": "Cardiovascular System",
+      "Mechanism": "DEMO DATA — placeholder mechanism text requiring a verified source.",
+      "Indications": "DEMO DATA — placeholder indication requiring a verified source.",
+      "Dosage": "Not available / Requires verified source",
+      "Pregnancy": "Not available / Requires verified source",
+      "Lactation": "Not available / Requires verified source",
+      "SourceURL": ""
+    },
+    {
+      "GenericName": "Demorespil",
+      "GenericNameAR": "ديمو ريسبيل",
+      "PharmacologicalClass": "Demo Bronchodilators",
+      "BodySystem": "Respiratory System",
+      "Mechanism": "DEMO DATA — placeholder mechanism text requiring a verified source.",
+      "Indications": "DEMO DATA — placeholder indication requiring a verified source.",
+      "Dosage": "Not available / Requires verified source",
+      "Pregnancy": "Not available / Requires verified source",
+      "Lactation": "Not available / Requires verified source",
+      "SourceURL": ""
+    }
+  ]
+}

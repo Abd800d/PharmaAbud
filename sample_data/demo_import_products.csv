@@ -1,0 +1,12 @@
+GenericName,GenericNameAR,BrandName,BrandNameAR,ActiveIngredient,Strength,DosageForm,Route,Manufacturer,Country,Barcode,RegistrationNumber,SourceURL
+Captopril,كابتوبريل,DemoCapto 25,ديمو كابتو 25,Captopril,25 mg,Tablet,Oral,Demo Pharma (DEMO DATA),SA,6281100000011,DEMO-REG-0001,
+Captopril,كابتوبريل,DemoCapto 25,ديمو كابتو 25,Captopril,25MG,Tabs,PO,Demo Pharma (DEMO DATA),SA,6281100000011,DEMO-REG-0001,
+Captopril,كابتوبريل,DemoCapto 50,ديمو كابتو 50,Captopril,50 mg,Tablet,Oral,Demo Pharma (DEMO DATA),SA,6281100000028,DEMO-REG-0002,
+,,BrokenRow Brand,,Missing generic,10 mg,Tablet,Oral,Demo Pharma (DEMO DATA),SA,6281100000035,DEMO-REG-0003,
+Metformin,ميتفورمين,DemoMet 500,ديمو ميت 500,Metformin,500 mg,Tablet,Oral,Demo Pharma (DEMO DATA),EG,6281100000042,DEMO-REG-0004,
+Metformin,ميتفورمين,DemoMet 850,ديمو ميت 850,Metformin,850 mg,Tablet,Oral,Demo Pharma (DEMO DATA),EG,6281100000059,DEMO-REG-0005,
+Salbutamol,سالبوتامول,DemoVent Inhaler,ديمو فنت بخاخ,Salbutamol,100 mcg/dose,Inhaler,Inhalation,Demo Pharma (DEMO DATA),SA,6281100000066,DEMO-REG-0006,
+Amoxicillin,أموكسيسيلين,DemoMox 250,ديمو موكس 250,Amoxicillin,250 mg,Oral Suspension,Oral,Demo Pharma (DEMO DATA),SA,6281100000073,DEMO-REG-0007,
+Omeprazole,أوميبرازول,DemoPraz 20,ديمو براس 20,Omeprazole,20 mg,Capsule,Oral,Demo Pharma (DEMO DATA),JO,6281100000080,DEMO-REG-0008,
+Ibuprofen,إيبوبروفين,DemoProfen 400,ديمو بروفن 400,Ibuprofen,400 mg,Tablet,Oral,Demo Pharma (DEMO DATA),SA,6281100000097,DEMO-REG-0009,
+Enalapril,إينالابريل,DemoEnal 5,ديمو إينال 5,Enalapril,5 mg,Tablet,Oral,Demo Pharma (DEMO DATA),SA,6281100000103,DEMO-REG-0010,
