@@ -1,14 +1,41 @@
-# Gradle files
-.gradle/
+# ---- Python / backend ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# ---- local databases & storage (never commit) ----
+*.db
+*.sqlite
+*.sqlite3
+backend/storage/
+storage/
+.env
+.env.*
+!.env.example
+
+# ---- Flutter / Dart ----
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
 build/
+.pub-cache/
+.pub/
+*.iml
+.idea/
+misc.xml
+deploymentTargetDropDown.xml
+render.experimental.xml
 
-# Local configuration file (sdk path, etc)
+# Gradle
+.gradle/
 local.properties
-
-# Log/OS Files
-*.log
-
-# Android Studio generated files and folders
 captures/
 .externalNativeBuild/
 .cxx/
@@ -16,19 +43,18 @@ captures/
 *.apk
 output-metadata.json
 
-# IntelliJ
-*.iml
-.idea/
-misc.xml
-deploymentTargetDropDown.xml
-render.experimental.xml
-
-# Keystore files
+# Keystore / credentials (never commit)
 *.jks
 *.keystore
-
-# Google Services (e.g. APIs or Firebase)
 google-services.json
-
-# Android Profiling
 *.hprof
+
+# ---- Node (if used) ----
+node_modules/
+npm-debug.log*
+
+# ---- OS / editors ----
+.DS_Store
+Thumbs.db
+*.log
+*.swp
