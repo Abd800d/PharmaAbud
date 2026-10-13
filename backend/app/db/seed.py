@@ -30,6 +30,7 @@ from app.models import (
     DrugLactation,
     DrugPregnancy,
     DrugSideEffect,
+    DrugSource,
     DrugWarning,
     Manufacturer,
     Permission,
@@ -492,6 +493,10 @@ def seed_database(db: Session, *, with_demo: bool = True, create_admin: bool = T
                 text_ar="بيانات تجريبية — التداخلات تتطلب مصدراً موثوقاً.",
             ))
             build_drug_search_fields(db, drug)
+
+            # provenance link to the demo source (§24–§25) — required for citations
+            db.add(DrugSource(drug_id=drug.id, source_id=demo_source.id, section="record",
+                              note="DEMO seed content — not verified pharmaceutical information."))
 
             # one demo product per drug
             product = Product(

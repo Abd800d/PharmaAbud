@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>APH Admin — AbdulmajeedPharma</title>
+  <link rel="stylesheet" href="css/app.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B2545'/%3E%3Ctext x='32' y='42' font-size='30' font-family='Arial' font-weight='bold' fill='%2322D3EE' text-anchor='middle'%3EAPH%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+  <div id="app">
+    <!-- Login -->
+    <section id="login-view" class="login-wrap hidden">
+      <div class="login-card">
+        <div class="brand-block">
+          <div class="logo-mark">APH</div>
+          <h1>AbdulmajeedPharma</h1>
+          <p class="muted">موسوعة عبدالمجيد للأدوية — Admin Dashboard</p>
+        </div>
+        <form id="login-form" autocomplete="on">
+          <label>Email
+            <input type="email" id="login-email" required placeholder="admin@aphdemo.com" />
+          </label>
+          <label>Password
+            <input type="password" id="login-password" required placeholder="••••••••" />
+          </label>
+          <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+          <p id="login-error" class="error-text hidden"></p>
+        </form>
+        <p class="footer-note">© Dr. Abdulmajeed Abdullah Almakhedhi · Educational &amp; professional reference only</p>
+      </div>
+    </section>
+
+    <!-- Shell -->
+    <section id="shell" class="shell hidden">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <div class="logo-mark small">APH</div>
+          <div>
+            <strong>AbdulmajeedPharma</strong>
+            <div class="muted tiny">Admin Console</div>
+          </div>
+        </div>
+        <nav id="nav" class="nav">
+          <a href="#/dashboard" data-route="dashboard">Dashboard</a>
+          <a href="#/drugs" data-route="drugs">Drugs</a>
+          <a href="#/products" data-route="products">Products</a>
+          <a href="#/systems" data-route="systems">Systems &amp; Classes</a>
+          <a href="#/manufacturers" data-route="manufacturers">Manufacturers</a>
+          <a href="#/sources" data-route="sources">Sources</a>
+          <a href="#/imports" data-route="imports">Imports</a>
+          <a href="#/review" data-route="review">Review Queue</a>
+          <a href="#/images" data-route="images">Image Review</a>
+          <a href="#/quality" data-route="quality">Data Quality</a>
+          <a href="#/users" data-route="users">Users &amp; Roles</a>
+          <a href="#/audit" data-route="audit">Audit Logs</a>
+        </nav>
+        <div class="sidebar-footer">
+          <button id="btn-logout" class="btn btn-ghost btn-block">Sign out</button>
+        </div>
+      </aside>
+      <main class="content">
+        <header class="topbar">
+          <h2 id="page-title">Dashboard</h2>
+          <div class="topbar-right">
+            <span id="user-badge" class="badge"></span>
+            <span class="badge badge-demo">DEMO ENVIRONMENT</span>
+          </div>
+        </header>
+        <div id="view" class="view"></div>
+      </main>
+    </section>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

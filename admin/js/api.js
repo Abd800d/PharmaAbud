@@ -1,0 +1,88 @@
+/* APH Admin API client — talks to the real FastAPI backend (§36) */
+const API_BASE = "/api/v1";
+
+function token() { return localStorage.getItem("aph_token") || ""; }
+
+async function request(method, path, { body, form, params } = {}) {
+  let url = API_BASE + path;
+  if (params) {
+    const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ""));
+    if ([...qs].length) url += "?" + qs.toString();
+  }
+  const headers = {};
+  if (token()) headers["Authorization"] = "Bearer " + token();
+  let payload = undefined;
+  if (form) {
+    payload = form; // FormData — browser sets content-type
+  } else if (body !== undefined) {
+    headers["Content-Type"] = "application/json";
+    payload = JSON.stringify(body);
+  }
+  const resp = await fetch(url, { method, headers, body: payload });
+  if (resp.status === 401) {
+    localStorage.removeItem("aph_token");
+    localStorage.removeItem("aph_user");
+    location.hash = "#/login";
+    throw new Error("Session expired. Please sign in again.");
+  }
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    const err = data.error || data.detail || {};
+    const message = typeof err === "string" ? err : err.message || JSON.stringify(err);
+    throw new Error(message);
+  }
+  return data;
+}
+
+export const api = {
+  login: (email, password) => request("POST", "/auth/login", { body: { email, password } }),
+  me: () => request("GET", "/auth/me"),
+  dashboard: () => request("GET", "/admin/dashboard"),
+  quality: () => request("GET", "/admin/quality"),
+  reviewQueue: () => request("GET", "/admin/queues/review"),
+  exportData: (entity, format) => request("GET", "/admin/export", { params: { entity, format } }),
+
+  search: (q, params = {}) => request("GET", "/search", { params: { q, limit: 25, ...params } }),
+  drugs: (params = {}) => request("GET", "/drugs", { params }),
+  drug: (id) => request("GET", "/drugs/" + id),
+  createDrug: (body) => request("POST", "/drugs", { body }),
+  updateDrug: (id, body) => request("PATCH", "/drugs/" + id, { body }),
+  verifyDrug: (id, new_status, notes = "") => request("POST", `/drugs/${id}/verify`, { body: { new_status, notes } }),
+
+  products: (params = {}) => request("GET", "/products", { params }),
+  product: (id) => request("GET", "/products/" + id),
+  createProduct: (body) => request("POST", "/products", { body }),
+  verifyProduct: (id, new_status, notes = "") => request("POST", `/products/${id}/verify`, { body: { new_status, notes } }),
+  productDuplicates: (id) => request("GET", `/products/${id}/duplicates`),
+
+  systems: () => request("GET", "/systems"),
+  systemGroups: (id) => request("GET", `/systems/${id}/groups`),
+  manufacturers: (params = {}) => request("GET", "/manufacturers", { params }),
+  createManufacturer: (body) => request("POST", "/manufacturers", { body }),
+  sources: (params = {}) => request("GET", "/sources", { params }),
+  createSource: (body) => request("POST", "/sources", { body }),
+
+  imports: (params = {}) => request("GET", "/imports", { params }),
+  importUpload: (file, entityType) => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("entity_type", entityType);
+    return request("POST", "/imports/upload", { form });
+  },
+  importExecute: (id, file) => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("commit", "true");
+    return request("POST", `/imports/${id}/execute-file`, { form });
+  },
+  importErrors: (id) => request("GET", `/imports/${id}/errors`),
+
+  imageQueue: () => request("GET", "/images/review-queue"),
+  approveImage: (id) => request("POST", `/images/${id}/approve`),
+  rejectImage: (id) => request("POST", `/images/${id}/reject`),
+
+  users: (params = {}) => request("GET", "/users", { params }),
+  roles: () => request("GET", "/users/roles"),
+  setUserRoles: (id, role_codes) => request("PUT", `/users/${id}/roles`, { body: { role_codes } }),
+  auditLogs: (params = {}) => request("GET", "/audit-logs", { params }),
+};
