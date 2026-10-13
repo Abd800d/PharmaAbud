@@ -52,6 +52,60 @@ curl -X POST localhost:8000/api/v1/auth/login \
 | POST | `/drugs/{id}/verify` | drug.verify | status transition `{new_status, notes}` |
 | GET | `/drugs/{id}/verification-history` | — | versioned review history |
 
+### Monograph sections (§6, §90) — replace-all semantics, audited, versioned
+
+| Method | Path | Body |
+|--------|------|------|
+| PUT | `/drugs/{id}/indications` | `{items:[{text_en,text_ar,is_off_label}]}` |
+| PUT | `/drugs/{id}/contraindications` | `{items:[{text_en,text_ar,severity}]}` (absolute / relative) |
+| PUT | `/drugs/{id}/warnings` | `{items:[{text_en,text_ar,severity}]}` (boxed / warning / notice) |
+| PUT | `/drugs/{id}/precautions` | `{items:[{text_en,text_ar}]}` |
+| PUT | `/drugs/{id}/side-effects` | `{items:[{text_en,text_ar,frequency,is_serious}]}` |
+| PUT | `/drugs/{id}/interactions` | `{items:[{interacting_agent,text_en,text_ar,severity}]}` |
+| PUT | `/drugs/{id}/food-interactions` | `{items:[{text_en,text_ar}]}` |
+| PUT | `/drugs/{id}/dosages` | `{items:[{population,indication,route,text_en,text_ar,frequency,max_dose,duration,is_verified}]}` |
+| PUT | `/drugs/{id}/monitoring` | `{items:[{text_en,text_ar}]}` |
+| PUT | `/drugs/{id}/administration` | `{items:[{text_en,text_ar}]}` |
+| PUT | `/drugs/{id}/pregnancy` | `{text_en,text_ar,risk_label,risk_system,source_id,last_verified_date}` (source terminology preserved) |
+| PUT | `/drugs/{id}/lactation` | `{text_en,text_ar,milk_transfer,infant_considerations,source_id}` |
+| PUT | `/drugs/{id}/overdose` | `{text_en,text_ar}` |
+| POST/DELETE | `/drugs/{id}/alternatives[/{altId}]` | therapeutic alternatives (§11) |
+
+### Source links (§24–§25)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/drugs/{id}/sources` | record-level + field-level links |
+| POST | `/drugs/{id}/sources` | record-level link `{source_id, section, note}` |
+| POST | `/drugs/{id}/content-sources` | **field-level link** `{source_id, section, quote}` (e.g. `dosage.adult`) |
+| DELETE | `/drugs/content-sources/{linkId}` | remove field-level link |
+
+## Translations (§58, §92)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/translations?entity_type=&entity_id=&status=&language=` | EN/AR field pairs + status |
+| POST | `/translations` | create (default `machine_translated`; original text preserved) |
+| PUT | `/translations/{id}` | edit translation (never the original) |
+| POST | `/translations/{id}/approve` | mark `human_reviewed` (reviewer recorded) |
+| GET | `/translations/stats` | status counts |
+
+## Favorites (§34)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/favorites` | user favorites with labels |
+| POST | `/favorites` | add `{entity_type, entity_id, folder}` |
+| DELETE | `/favorites/{entity_type}/{entity_id}` | remove |
+
+## Drug requests (§69)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/drug-requests?name=&reason=` | user "Request New Drug" |
+| GET | `/drug-requests?status=` | review queue |
+| PATCH | `/drug-requests/{id}?status=&resolution_notes=` | workflow: submitted → in_review → researching → pending_pharmacist_review → approved → published or rejected |
+
 ## Products — `/products`
 
 | Method | Path | Permission | Description |
