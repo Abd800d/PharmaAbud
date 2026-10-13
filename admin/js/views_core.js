@@ -1,6 +1,7 @@
 /* Core views: Dashboard, Drugs, Products */
 import { api } from "./api.js";
 import { h, esc, toast, statusBadge, demoBadge, barChart, emptyState, fmtDate } from "./ui.js";
+import { renderDrugTabs } from "./drug_tabs.js";
 
 /* ------------------------------------------------------------- dashboard */
 export async function renderDashboard(root) {
@@ -92,22 +93,15 @@ export async function renderDrugs(root) {
 
   async function openEditor(id) {
     const editorEl = root.querySelector("#drug-editor");
-    const d = id ? await api.drug(id) : { generic_name_en: "", generic_name_ar: "", mechanism_en: "", overview_en: "", is_demo: true };
+    const d = id
+      ? await api.drug(id)
+      : { generic_name_en: "", generic_name_ar: "", mechanism_en: "", overview_en: "", is_demo: true };
     editorEl.classList.remove("hidden");
     editorEl.innerHTML = `
       <div class="card">
-        <h3>${id ? `Edit: ${esc(d.generic_name_en)}` : "New Drug"}</h3>
-        <div class="tabs">
-          <button class="active">Basic</button><button>Mechanism</button><button>Overview</button><button>Verification</button>
-        </div>
-        <div class="form-grid">
-          <label>Generic Name (EN)<input id="f-name-en" value="${esc(d.generic_name_en)}" /></label>
-          <label>Generic Name (AR)<input id="f-name-ar" dir="rtl" value="${esc(d.generic_name_ar)}" /></label>
-          <label>Pharmacological Class<input id="f-class" value="${esc(d.pharmacological_class_name || "")}" /></label>
-          <label>ATC Code<input id="f-atc" value="${esc(d.atc_code || "")}" /></label>
-          <label class="full">Mechanism (EN)<textarea id="f-mech" rows="4">${esc(d.mechanism_en || "")}</textarea></label>
-          <label class="full">Overview (EN)<textarea id="f-overview" rows="3">${esc(d.overview_en || "")}</textarea></label>
-        </div>
+        <h3>${id ? `Edit: ${esc(d.generic_name_en)} ${demoBadge(d.is_demo)} ${statusBadge(d.verification_status)}` : "New Drug"}</h3>
+        <div class="tabs" id="drug-tabs"></div>
+        <div id="drug-tab-body"></div>
         <div class="toolbar" style="margin-top:16px">
           <button class="btn btn-primary" id="f-save">Save Draft</button>
           ${id ? `
@@ -119,17 +113,37 @@ export async function renderDrugs(root) {
         </div>
       </div>
     `;
+    if (id) {
+      renderDrugTabs(editorEl.querySelector(".card"), id, d, load);
+    } else {
+      editorEl.querySelector("#drug-tabs").innerHTML = "<button class='active'>Basic Information</button>";
+      editorEl.querySelector("#drug-tab-body").innerHTML = `
+        <div class="form-grid">
+          <label>Generic Name (EN)<input id="f-name-en" /></label>
+          <label>Generic Name (AR)<input id="f-name-ar" dir="rtl" /></label>
+          <label>Pharmacological Class<input id="f-class" /></label>
+          <label>ATC Code<input id="f-atc" /></label>
+          <label class="full">Mechanism (EN)<textarea id="f-mech" rows="3"></textarea></label>
+        </div>`;
+    }
     editorEl.querySelector("#f-close").onclick = () => editorEl.classList.add("hidden");
     editorEl.querySelector("#f-save").onclick = async () => {
-      const payload = {
-        generic_name_en: editorEl.querySelector("#f-name-en").value,
-        generic_name_ar: editorEl.querySelector("#f-name-ar").value,
-        pharmacological_class_name: editorEl.querySelector("#f-class").value,
-        atc_code: editorEl.querySelector("#f-atc").value,
-        mechanism_en: editorEl.querySelector("#f-mech").value,
-        overview_en: editorEl.querySelector("#f-overview").value,
-        is_demo: d.is_demo ?? true,
-      };
+      const payload = id
+        ? {
+            generic_name_en: editorEl.querySelector("#t-name-en")?.value || d.generic_name_en,
+            generic_name_ar: editorEl.querySelector("#t-name-ar")?.value || d.generic_name_ar,
+            overview_en: editorEl.querySelector("#t-overview")?.value || d.overview_en,
+            mechanism_en: editorEl.querySelector("#t-mech")?.value || d.mechanism_en,
+            is_demo: d.is_demo ?? true,
+          }
+        : {
+            generic_name_en: editorEl.querySelector("#f-name-en").value,
+            generic_name_ar: editorEl.querySelector("#f-name-ar").value,
+            pharmacological_class_name: editorEl.querySelector("#f-class").value,
+            atc_code: editorEl.querySelector("#f-atc").value,
+            mechanism_en: editorEl.querySelector("#f-mech").value,
+            is_demo: true,
+          };
       try {
         if (id) await api.updateDrug(id, payload);
         else await api.createDrug(payload);

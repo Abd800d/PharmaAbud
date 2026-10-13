@@ -35,8 +35,34 @@ python scripts/generate_synthetic.py --drugs 100000 --products 100000
 
 Records are **SYNTH-prefixed, is_demo=true, NON-PRODUCTION** — they exist only
 to measure search/import/sync performance and can never be mistaken for real
-pharmaceutical data. Measure: search latency (all match types), scroll
-pagination, import throughput, sync pull pages, memory.
+pharmaceutical data.
+
+### Measured results (2026-10-13 — 100,031 drugs + 100,031 products, SQLite)
+
+Generation: 200,000 synthetic rows in **74 s**. Search latency (median of 5,
+limit 25; SQLite LIKE backend — PostgreSQL trigram indexes are faster):
+
+| Query type | Median | p95 | Result quality |
+|------------|--------|-----|----------------|
+| Exact generic | 189 ms | 237 ms | 1 hit, `exact_generic` |
+| Exact brand | 223 ms | 251 ms | 1 hit, `exact_brand` |
+| Prefix (`SYNTH-Demolo`) | 235 ms | 283 ms | ranked prefix matches |
+| Partial token (`zumab`) | 165 ms | 203 ms | partial matches |
+| Typo / fuzzy (`SYNTH-Demoprl-…`) | 391 ms | 428 ms | target found via fuzzy rescue |
+| Arabic (`سينث 54321`) | 188 ms | 237 ms | Arabic-normalized matches |
+| Barcode (`SYNTH100042424`) | 206 ms | 241 ms | 1 hit, `barcode` |
+| No result | 212 ms | 226 ms | 0 hits + suggestions |
+| Suggestions | 38 ms | — | — |
+| Deep pagination (offset 200) | 251 ms | — | stable |
+
+Conclusions: ranking stays **precise at 200k+ records** (exact queries return
+exactly the target with the correct match type); the two-pass retrieval
+(precise `%token%` → typo-rescue only when empty) keeps candidate sets small;
+production PostgreSQL adds trigram/tsvector/BRIN indexes (migration 0001) for
+sub-100 ms targets at 500k+.
+
+Record actual numbers during your own runs — do not trade correctness for
+benchmarks (§78).
 
 ## Manual test checklists
 

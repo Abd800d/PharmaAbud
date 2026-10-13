@@ -145,7 +145,7 @@ def main() -> None:
                 barcode=f"SYNTH{100000000 + i}",
                 is_demo=True,
                 verification_status=VerificationStatus.DRAFT.value,
-                search_text=normalize_text(brand),
+                search_text=normalize_text(f"{brand} SYNTH{100000000 + i}"),
             )
             db.add(product)
             if i % batch == 0:

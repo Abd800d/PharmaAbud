@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, require_permission
-from app.core.errors import NotFoundError
+from app.core.errors import NotFoundError, ValidationFailed
 from app.db.session import get_db
 from app.models import AuditLog, DrugRequest, Role, User
 from app.schemas.auth import RoleOut, UserOut, UserRoleUpdate
@@ -77,6 +77,35 @@ def list_drug_requests(db: Session = Depends(get_db), status: str = "") -> dict:
         "id": r.id, "requested_name": r.requested_name, "requested_name_ar": r.requested_name_ar,
         "reason": r.reason, "status": r.status, "created_at": r.created_at.isoformat(),
     } for r in rows]}
+
+
+@requests_router.patch("/{request_id}", response_model=Message,
+                       dependencies=[Depends(require_permission("drug.edit"))])
+def update_drug_request(request_id: str, status: str = "in_review",
+                        resolution_notes: str = "", created_drug_id: str = "",
+                        db: Session = Depends(get_db),
+                        user: User = Depends(get_current_user)) -> Message:
+    """Workflow (§69): submitted → in_review → researching →
+    pending_pharmacist_review → approved → published | rejected."""
+    allowed = {"submitted", "in_review", "researching", "pending_pharmacist_review",
+               "approved", "published", "rejected"}
+    if status not in allowed:
+        raise ValidationFailed(f"Unknown status '{status}'. Allowed: {sorted(allowed)}")
+    row = db.get(DrugRequest, request_id)
+    if row is None:
+        raise NotFoundError("DrugRequest", request_id)
+    previous = row.status
+    row.status = status
+    row.reviewer_id = user.id
+    if resolution_notes:
+        row.resolution_notes = resolution_notes
+    if created_drug_id:
+        row.created_drug_id = created_drug_id
+    record_audit(db, action="drug_request.status_changed", entity_type="drug_request",
+                 entity_id=request_id, user_id=user.id,
+                 previous_value=previous, new_value=status)
+    db.flush()
+    return Message(message=f"Request status: {previous} → {status}.")
 
 
 @audit_router.get("", response_model=dict, dependencies=[Depends(require_permission("audit.read"))])

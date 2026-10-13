@@ -42,12 +42,24 @@ export const api = {
   reviewQueue: () => request("GET", "/admin/queues/review"),
   exportData: (entity, format) => request("GET", "/admin/export", { params: { entity, format } }),
 
+  // generic REST verbs for module-specific endpoints
+  get: (path, params) => request("GET", path, { params }),
+  post: (path, opts = {}) => request("POST", path, opts),
+  put: (path, opts = {}) => request("PUT", path, opts),
+  del: (path) => request("DELETE", path),
+
   search: (q, params = {}) => request("GET", "/search", { params: { q, limit: 25, ...params } }),
   drugs: (params = {}) => request("GET", "/drugs", { params }),
   drug: (id) => request("GET", "/drugs/" + id),
   createDrug: (body) => request("POST", "/drugs", { body }),
   updateDrug: (id, body) => request("PATCH", "/drugs/" + id, { body }),
   verifyDrug: (id, new_status, notes = "") => request("POST", `/drugs/${id}/verify`, { body: { new_status, notes } }),
+  verificationHistory: (id) => request("GET", `/drugs/${id}/verification-history`),
+
+  // monograph sections (§6, §90)
+  putSection: (drugId, section, body) => request("PUT", `/drugs/${drugId}/${section}`, { body }),
+  drugSources: (drugId) => request("GET", `/drugs/${drugId}/sources`),
+  translations: (params = {}) => request("GET", "/translations", { params }),
 
   products: (params = {}) => request("GET", "/products", { params }),
   product: (id) => request("GET", "/products/" + id),

@@ -182,50 +182,69 @@ def _drug_candidates(db: Session, query_norm: str, query_ar: bool, filters: Dict
         selectinload(Drug.classifications),
         selectinload(Drug.products).selectinload(Product.manufacturer),
     )
+    tokens = _query_tokens(query_norm)
+
+    # pass 1 (precise): %token% over the informative tokens
     conds = []
-    for t in _query_tokens(query_norm):
+    for t in tokens[:2]:
         like = f"%{t}%"
-        prefix = f"{t[:4]}%" if len(t) >= 4 else f"{t}%"
         conds.append(or_(
             Drug.search_text.like(like),
-            Drug.search_text.like(prefix),  # typo/prefix fallback for fuzzy candidates
             Drug.search_text_ar.like(like),
             Drug.generic_name_en.ilike(like),
-            Drug.generic_name_ar.ilike(like),
             Drug.atc_code.ilike(like),
         ))
     if not conds:
-        conds.append(Drug.id == Drug.id)  # no-op: browse mode
-    stmt = stmt.where(or_(*conds))
-    stmt = _apply_drug_filters(stmt, filters)
-    stmt = stmt.limit(CANDIDATE_LIMIT)
-    return list(db.scalars(stmt).all())
+        conds.append(Drug.id == Drug.id)
+    primary = db.scalars(_apply_drug_filters(stmt.where(or_(*conds)), filters).limit(CANDIDATE_LIMIT)).all()
+    if primary:
+        return list(primary)
+
+    # pass 2 (typo rescue): short-prefix candidates, filtered by fuzzy scoring
+    rescue = []
+    for t in tokens[:2]:
+        prefix = f"{t[:4]}%" if len(t) >= 4 else f"{t}%"
+        rescue.append(or_(Drug.search_text.like(prefix), Drug.generic_name_en.ilike(prefix)))
+    if rescue:
+        return list(db.scalars(_apply_drug_filters(stmt.where(or_(*rescue)), filters).limit(CANDIDATE_LIMIT)).all())
+    return []
 
 
-def _product_candidates(db: Session, query_norm: str, filters: Dict[str, Any]) -> List[Product]:
+def _product_candidates(db: Session, query_norm: str, filters: Dict[str, Any], raw_query: str = "") -> List[Product]:
     stmt: Select = select(Product).options(
         selectinload(Product.ingredients),
         selectinload(Product.manufacturer),
         selectinload(Product.drug),
     )
-    conds = []
-    for t in _query_tokens(query_norm):
+    tokens = _query_tokens(query_norm)
+    raw = (raw_query or "").replace(" ", "")
+
+    # pass 1 (precise): tokens + indexed identifier equality (barcode/GTIN/registration)
+    conds = [or_(
+        Product.barcode == raw,
+        Product.gtin == raw,
+        Product.registration_number == raw,
+    )] if len(raw) >= 4 else []
+    for t in tokens[:2]:
         like = f"%{t}%"
-        prefix = f"{t[:4]}%" if len(t) >= 4 else f"{t}%"
         conds.append(or_(
             Product.search_text.like(like),
-            Product.search_text.like(prefix),
             Product.brand_name_en.ilike(like),
-            Product.brand_name_ar.ilike(like),
-            Product.barcode.ilike(like),
-            Product.registration_number.ilike(like),
         ))
     if not conds:
         conds.append(Product.id == Product.id)
-    stmt = stmt.where(or_(*conds))
-    stmt = _apply_product_filters(stmt, filters)
-    stmt = stmt.limit(CANDIDATE_LIMIT)
-    return list(db.scalars(stmt).all())
+    primary = db.scalars(_apply_product_filters(stmt.where(or_(*conds)), filters).limit(CANDIDATE_LIMIT)).all()
+    if primary:
+        return list(primary)
+
+    # pass 2 (typo rescue)
+    rescue = []
+    for t in tokens[:2]:
+        prefix = f"{t[:4]}%" if len(t) >= 4 else f"{t}%"
+        rescue.append(or_(Product.search_text.like(prefix), Product.brand_name_en.ilike(prefix)))
+    if rescue:
+        return list(db.scalars(_apply_product_filters(stmt.where(or_(*rescue)), filters).limit(CANDIDATE_LIMIT)).all())
+    return []
 
 
 def _apply_drug_filters(stmt: Select, filters: Dict[str, Any]) -> Select:
@@ -324,7 +343,7 @@ def search(
 
     # ---- products ----
     if "product" in kinds:
-        for product in _product_candidates(db, query_norm, filters):
+        for product in _product_candidates(db, query_norm, filters, raw_query=q):
             candidates = [
                 (product.brand_name_en, SCORE_EXACT_BRAND),
                 (product.brand_name_ar, SCORE_EXACT_ARABIC),
