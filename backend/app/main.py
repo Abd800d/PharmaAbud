@@ -71,6 +71,12 @@ def create_app() -> FastAPI:
 
     app.include_router(api_router, prefix=settings.api_v1_prefix)
 
+    @app.get("/", include_in_schema=False)
+    def root_redirect():
+        from fastapi.responses import RedirectResponse
+
+        return RedirectResponse(url="/admin/")
+
     @app.get("/health", tags=["ops"])
     def health() -> dict:
         return {
