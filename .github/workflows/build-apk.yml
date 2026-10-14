@@ -42,7 +42,7 @@ jobs:
       - name: Publish errors as annotations
         if: always()
         run: |
-          { grep -E "error:|Error|FAILURE|e: file|Target" analyze-log.txt build-log.txt 2>/dev/null || true; } | head -30 | cut -c1-240 | while IFS= read -r l; do echo "::error::$l"; done
+          { grep -E "error:|Error|FAILURE|e: file|Target|What went wrong|Execution failed" analyze-log.txt build-log.txt 2>/dev/null || true; echo "---BUILD TAIL---"; tail -25 build-log.txt 2>/dev/null || true; } | head -45 | cut -c1-240 | while IFS= read -r l; do echo "::error::$l"; done
           tail -40 build-log.txt >> "$GITHUB_STEP_SUMMARY" || true
 
       - name: Upload build logs (always)
