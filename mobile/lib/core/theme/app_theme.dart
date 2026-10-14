@@ -87,7 +87,7 @@ ThemeData buildAphTheme({required Brightness brightness}) {
         color: isDark ? Colors.white : AphColors.navy,
       ),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: isDark ? AphColors.darkSurface : AphColors.surface,
       elevation: 0,
       shape: RoundedRectangleBorder(
