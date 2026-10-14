@@ -1,5 +1,6 @@
 /// APH localization — English + Arabic (§3, §71).
 /// Arabic is a first-class language: RTL, Arabic typography, Arabic search.
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class AppLocalizations {
@@ -304,7 +305,10 @@ class _AphLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   bool isSupported(Locale locale) => ['en', 'ar'].contains(locale.languageCode);
 
   @override
-  Future<AppLocalizations> load(Locale locale) async => AppLocalizations(locale);
+  Future<AppLocalizations> load(Locale locale) =>
+      // Strings are in-memory maps — load synchronously so the first frame
+      // never renders without localizations (no blank-frame flicker).
+      SynchronousFuture<AppLocalizations>(AppLocalizations(locale));
 
   @override
   bool shouldReload(_AphLocalizationsDelegate old) => false;
