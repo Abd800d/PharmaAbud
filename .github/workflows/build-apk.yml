@@ -1,0 +1,62 @@
+name: Build Android APK (AbdulmajeedPharma APH)
+
+on:
+  push:
+    branches: [main, master, 'arena/**']
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.4'
+          channel: 'stable'
+
+      # توليد منصة Android الرسمية (دون المساس بـ lib/ و assets/)
+      - name: Generate Android platform
+        run: |
+          flutter create --platforms=android --project-name pharma_encyclopedia --org com.abdulmajeedpharma /tmp/aph_gen
+          rm -rf android
+          cp -r /tmp/aph_gen/android android
+          python3 tools/patch_android.py
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze (non-blocking)
+        run: flutter analyze 2>&1 | tee analyze-log.txt || true
+
+      - name: Build release APK
+        run: |
+          set -o pipefail
+          flutter build apk --release 2>&1 | tee build-log.txt
+
+      - name: Publish errors as annotations
+        if: always()
+        run: |
+          { grep -E "error:|Error|FAILURE|e: file|Target|What went wrong|Execution failed" analyze-log.txt build-log.txt 2>/dev/null || true; echo "---BUILD TAIL---"; tail -25 build-log.txt 2>/dev/null || true; } | head -45 | cut -c1-240 | while IFS= read -r l; do echo "::error::$l"; done
+          tail -40 build-log.txt >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Upload build logs (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aph-build-logs
+          path: |
+            analyze-log.txt
+            build-log.txt
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AbdulmajeedPharma-APH-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" id="htmlRoot">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b3b4f">
+<title>AbdulmajeedPharma — APH</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#071923;--bg2:#0b3b4f;--card:#0e2f40;--card2:#123a4f;--line:#1c506b;--txt:#eaf6fb;--mut:#9fc3d4;--acc:#14c8b4;--acc2:#ffb020;--danger:#ff5d73;--r:18px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:Cairo,Inter,system-ui,sans-serif;background:linear-gradient(180deg,var(--bg2),var(--bg) 340px);color:var(--txt);padding-bottom:86px}
+a{color:var(--acc)} button{font-family:inherit;cursor:pointer} input,select,textarea{font-family:inherit}
+.top{position:sticky;top:0;z-index:50;background:rgba(7,25,35,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.topin{max-width:760px;margin:auto;padding:12px 14px;display:flex;align-items:center;gap:10px}
+.logo{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,var(--acc),#087f8c);display:grid;place-items:center;font-weight:900;font-size:15px;color:#04222b;box-shadow:0 8px 24px rgba(20,200,180,.35)}
+.brand{flex:1}.brand b{font-size:16px;display:block;line-height:1.15}.brand span{font-size:11px;color:var(--mut)}
+.owner{font-size:10px;color:var(--acc2);border:1px solid #6b5316;background:#2a2208;padding:5px 8px;border-radius:99px;white-space:nowrap}
+.net{font-size:10px;padding:5px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mut)} .net.on{color:#52ffa8;border-color:#14532d}
+.wrap{max-width:760px;margin:auto;padding:14px}
+.hero{background:linear-gradient(135deg,#0f766e,#155e75 55%,#7c2d12);border:1px solid var(--line);border-radius:24px;padding:18px;position:relative;overflow:hidden}
+.hero h1{margin:0 0 4px;font-size:22px}.hero p{margin:0;color:#d7f3ee;font-size:13px}
+.searchbar{display:flex;gap:8px;margin-top:14px}
+.searchbar input{flex:1;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;font-size:15px;outline:none}
+.btn{border:0;border-radius:14px;padding:12px 16px;background:var(--acc);color:#032630;font-weight:800}
+.btn.ghost{background:var(--card2);color:var(--txt);border:1px solid var(--line)} .btn.warn{background:var(--acc2)} .btn.danger{background:var(--danger);color:#fff}
+.btn.sm{padding:8px 11px;border-radius:11px;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.sys{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 10px;text-align:center;min-height:104px}
+.sys .ic{font-size:26px}.sys b{display:block;font-size:12px;margin-top:6px;line-height:1.35}.sys span{font-size:10px;color:var(--acc);font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.drug{display:flex;gap:12px;align-items:center;width:100%;text-align:start}
+.thumb{width:58px;height:58px;border-radius:15px;flex:0 0 58px;display:grid;place-items:center;font-size:24px;background:linear-gradient(135deg,#14532d,#0f766e);border:1px solid var(--line);overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.mut{color:var(--mut);font-size:12px}.chip{display:inline-block;padding:5px 9px;border-radius:99px;background:#0a2a3a;border:1px solid var(--line);font-size:11px;margin:2px}
+.tag{font-size:10px;padding:3px 7px;border-radius:99px;background:#134e4a;color:#5eead4;border:1px solid #115e59}
+h2.sec{font-size:17px;margin:20px 2px 10px} .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.prod{border-inline-start:4px solid var(--acc)}
+label.f{display:block;font-size:12px;color:var(--mut);margin:10px 0 5px}
+input.in,select.in,textarea.in{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:#082635;color:var(--txt);outline:none}
+textarea.in{min-height:74px}
+.nav{position:fixed;bottom:0;left:0;right:0;z-index:60;background:rgba(6,22,31,.97);border-top:1px solid var(--line);padding:8px 6px calc(8px + env(safe-area-inset-bottom))}
+.navin{max-width:760px;margin:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.nav button{background:none;border:0;color:var(--mut);font-size:10px;padding:7px 2px;border-radius:12px}.nav button b{display:block;font-size:19px}
+.nav button.act{color:var(--acc);background:#0c3042}
+.view{display:none}.view.act{display:block}
+.msg{border-inline-start:4px solid var(--acc2)} .msg.admin{border-inline-start-color:var(--acc)}
+.chatlog{display:flex;flex-direction:column;gap:8px}.bubble{max-width:88%;padding:11px 13px;border-radius:16px;background:var(--card2);border:1px solid var(--line);font-size:13px;line-height:1.8;white-space:pre-wrap}
+.bubble.me{align-self:flex-end;background:#0f766e}.bubble.bot{align-self:flex-start}
+.fab{position:fixed;bottom:96px;inset-inline-end:14px;z-index:55;display:flex;flex-direction:column;gap:8px}
+.fab a{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:21px;text-decoration:none;box-shadow:0 10px 25px rgba(0,0,0,.4)}
+.wa{background:#25d366}.mail{background:#f59e0b}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:100;display:none;place-items:end center}.modal.open{display:grid}
+.sheet{background:#0a2838;width:100%;max-width:760px;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:18px}
+.kv{font-size:13px;line-height:1.9}.kv b{color:var(--acc)}
+.notice{font-size:11px;color:#fde68a;background:#2a2208;border:1px solid #6b5316;border-radius:12px;padding:9px;line-height:1.8}
+footer{max-width:760px;margin:18px auto;padding:0 16px;color:var(--mut);font-size:11px;line-height:2;text-align:center}
+@media(min-width:640px){.grid{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+<header class="top"><div class="topin">
+  <div class="logo">APH</div>
+  <div class="brand"><b>AbdulmajeedPharma</b><span data-i="tagline">موسوعة الأدوية اليمنية والعربية</span></div>
+  <span class="owner">Abdulmajeed Almakhedhi</span>
+  <span class="net" id="netBadge">…</span>
+  <button class="btn ghost sm" id="langBtn">EN</button>
+</div></header>
+
+<main class="wrap">
+  <!-- HOME -->
+  <section class="view act" id="v-home">
+    <div class="hero"><h1 data-i="heroT">ابحث عن أي دواء…</h1><p data-i="heroP">بالاسم العلمي أو التجاري أو الشركة — حتى لو كتبته بخطأ بسيط سنقرّب لك النتيجة الصحيحة مع البدائل والمنتجات في اليمن والوطن العربي.</p>
+      <div class="searchbar"><input id="q" data-i-ph="searchPh" placeholder="مثال: باراسيتامول، Panadol، أوكس…"><button class="btn" onclick="doSearch()" data-i="search">بحث</button></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn ghost sm" onclick="pickImage('lens')">📷 <span data-i="byPhoto">بحث بصورة الدواء (Google Lens)</span></button>
+        <button class="btn ghost sm" onclick="go('ai')">🤖 <span data-i="aiBtn">اسأل المساعد الدوائي</span></button>
+        <button class="btn ghost sm" onclick="go('add')">➕ <span data-i="addDrug">إضافة دواء</span></button>
+        <label class="btn ghost sm" style="margin:0">🖼️ <span data-i="byPhoto2">صورة للبحث</span><input type="file" accept="image/*" capture="environment" hidden onchange="lensFile(this)"></label>
+      </div>
+    </div>
+    <div id="searchResults"></div>
+    <h2 class="sec">⭐ <span data-i="favs">المفضلة</span></h2><div id="favBox"><p class="mut" data-i="noFavs">لا مفضلة بعد — افتح أي دواء واضغط ☆</p></div>
+    <h2 class="sec">🏥 <span data-i="systems">تصنيف الأدوية حسب أجهزة الجسم</span></h2><div class="grid" id="sysGrid"></div>
+    <h2 class="sec">🆕 <span data-i="sampleDrugs">أدوية شائعة</span></h2><div id="popular"></div>
+  </section>
+
+  <!-- SYSTEMS / LIST -->
+  <section class="view" id="v-list"><button class="btn ghost sm" onclick="go('home')">← <span data-i="back">رجوع</span></button>
+    <h2 class="sec" id="listTitle"></h2><div class="row" id="subChips"></div><div id="drugList" style="margin-top:10px"></div></section>
+
+  <!-- DRUG DETAIL -->
+  <section class="view" id="v-detail"><button class="btn ghost sm" onclick="go('list')">← <span data-i="back">رجوع</span></button><div id="detailBox" style="margin-top:10px"></div></section>
+
+  <!-- AI -->
+  <section class="view" id="v-ai"><h2 class="sec">🤖 <span data-i="aiT">المساعد الدوائي الذكي</span></h2>
+    <div class="notice" data-i="aiNote">يجيب من قاعدة APH المحلية، وعند توفر الإنترنت يمكن جلب النشرة الرسمية من openFDA / DailyMed. المعلومات تعليمية ولا تغني عن الطبيب أو الصيدلي.</div>
+    <div class="chatlog" id="chatLog" style="margin-top:12px"></div>
+    <div class="searchbar"><input id="aiQ" placeholder="مثال: ما جرعة الميتفورمين؟ بديل البنادول؟ تداخلات الوارفارين؟"><button class="btn" onclick="askAI()" data-i="ask">اسأل</button></div>
+    <div class="row" style="margin-top:8px"><button class="btn ghost sm" onclick="quickAI(this)">جرعة الباراسيتامول</button><button class="btn ghost sm" onclick="quickAI(this)">بدائل الإيبوبروفين</button><button class="btn ghost sm" onclick="quickAI(this)">تداخلات الوارفارين</button><button class="btn ghost sm" onclick="quickAI(this)">أدوية الضغط</button></div>
+  </section>
+
+  <!-- ADD / IMPORT -->
+  <section class="view" id="v-add"><h2 class="sec">➕ <span data-i="addT">إضافة دواء يدوياً / استيراد قاعدة بيانات</span></h2>
+    <div class="card"><b data-i="manualAdd">إضافة يدوية (تُحفظ دائماً على جهازك)</b>
+      <label class="f">Generic EN *</label><input class="in" id="f_en"><label class="f">الاسم العلمي عربي</label><input class="in" id="f_ar">
+      <label class="f" data-i="system">الجهاز / التصنيف</label><select class="in" id="f_sys"></select>
+      <label class="f">Subgroup EN</label><input class="in" id="f_sgE"><label class="f">المجموعة الدوائية عربي</label><input class="in" id="f_sgA">
+      <label class="f">ATC</label><input class="in" id="f_atc"><label class="f" data-i="indic">الاستخدامات</label><textarea class="in" id="f_ind"></textarea>
+      <label class="f" data-i="dose">الجرعة المعتادة</label><textarea class="in" id="f_dose"></textarea>
+      <label class="f" data-i="warn">تحذيرات</label><textarea class="in" id="f_warn"></textarea>
+      <label class="f" data-i="drugImg">صورة الدواء</label><input class="in" type="file" accept="image/*" id="f_img">
+      <div class="row" style="margin-top:12px"><button class="btn" onclick="saveManual()" data-i="save">حفظ الدواء</button></div>
+    </div>
+    <div class="card"><b>📥 <span data-i="importT">استيراد CSV / Excel (.xlsx) / JSON</span></b>
+      <p class="mut" data-i="importP">يدعم ملفات كبيرة (CSV/JSON حتى مئات آلاف الصفوف — تُحفظ محلياً بشكل دائم). الأعمدة: genericEn,genericAr,systemId,subgroupEn,subgroupAr,atc,indications,dosage,warnings,brand,strength,form,manufacturer,country,agentYemen</p>
+      <div class="row"><label class="btn">اختيار ملف<input type="file" id="impFile" accept=".csv,.json,.xlsx,.xls" hidden onchange="importFile(this)"></label>
+      <button class="btn ghost" onclick="downloadTemplate()">⬇ Template CSV</button>
+      <button class="btn ghost" onclick="exportDB('json')">⬇ Export JSON</button>
+      <button class="btn ghost" onclick="exportDB('csv')">⬇ Export CSV</button></div>
+      <p class="mut" id="impStatus"></p>
+    </div>
+    <div class="card"><b>🖼️ <span data-i="imgImport">استيراد صور</span></b><p class="mut" data-i="imgImportP">من صفحة أي دواء/منتج اضغط «تغيير الصورة» واختر صورة من جهازك — تُضغط وتُحفظ دائماً داخل التطبيق.</p></div>
+  </section>
+
+  <!-- MESSAGES -->
+  <section class="view" id="v-msgs"><h2 class="sec">💬 <span data-i="msgsT">رسائل المستخدمين والإدارة</span></h2>
+    <div class="notice" data-i="msgsNote">اكتب استفسارك أو ملاحظتك عن أي خلل — تظهر هنا، ويرد عليها د. عبدالمجيد من لوحة التحكم فتظهر للجميع. (المزامنة بين الأجهزة تحتاج ربط الخادم — راجع دليل الإدارة)</div>
+    <div class="card"><input class="in" id="m_name" placeholder="الاسم / Name"><label class="f"></label><textarea class="in" id="m_body" placeholder="اكتب رسالتك…"></textarea>
+    <div class="row" style="margin-top:10px"><button class="btn" onclick="postMsg(false)" data-i="send">إرسال</button><button class="btn warn" onclick="adminReplyPrompt()">🔐 <span data-i="adminReply">رد الإدارة</span></button></div></div>
+    <div id="msgList"></div>
+  </section>
+
+  <!-- MORE -->
+  <section class="view" id="v-more"><h2 class="sec">⚙️ <span data-i="moreT">المزيد والإدارة</span></h2>
+    <div class="card"><b>AbdulmajeedPharma (APH)</b><p class="mut" id="statsBox"></p>
+      <div class="row"><a class="btn" target="_blank" href="https://wa.me/967781733795?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D8%B9%D9%86%D8%AF%D9%8A%20%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%B9%D9%86%20%D8%AA%D8%B7%D8%A8%D9%8A%D9%82%20APH">💬 WhatsApp 781733795</a>
+      <a class="btn ghost" href="mailto:7a8b1d@gmail.com">✉️ 7a8b1d@gmail.com</a>
+      <a class="btn ghost" href="admin/" target="_blank">🛠️ <span data-i="adminPanel">لوحة تحكم الموقع</span></a></div></div>
+    <div class="card"><b data-i="onlineT">الإنترنت والمصادر الموثوقة</b><p class="mut">openFDA • DailyMed • RxNorm • Google Lens</p>
+      <div class="row"><button class="btn ghost" onclick="window.open('https://lens.google.com','_blank')">Google Lens</button>
+      <button class="btn ghost" onclick="window.open('https://dailymed.nlm.nih.gov','_blank')">DailyMed</button>
+      <button class="btn ghost" onclick="window.open('https://open.fda.gov/apis/drug/label/','_blank')">openFDA</button></div>
+      <p class="mut" data-i="onlineP">يعمل التطبيق بالكامل دون إنترنت. عند الاتصال تفعَّل: جلب النشرات الرسمية، البحث في Google، وتحديث البيانات الناقصة.</p></div>
+    <div class="card"><b>🔐 <span data-i="adminMode">وضع الإدارة (تعديل البيانات والصور)</span></b><p class="mut">PIN: <span id="pinState"></span></p>
+      <div class="row"><button class="btn warn" onclick="toggleAdmin()" id="adminBtn"></button><button class="btn ghost" onclick="changePin()">تغيير PIN</button>
+      <button class="btn danger" onclick="resetDB()" data-i="reset">استعادة قاعدة البداية</button></div></div>
+  </section>
+</main>
+
+<footer>© <span data-i="rights">جميع الحقوق محفوظة للدكتور</span> <b>Abdulmajeed Abdullah Almakhedhi</b> — AbdulmajeedPharma (APH)<br>
+<span data-i="disclaimer">معلومات تعليمية فقط ولا تغني عن استشارة الطبيب أو الصيدلي. الأدوية المقيدة لا تُصرف إلا بوصفة.</span><br>
+WhatsApp: 781733795 • 7a8b1d@gmail.com</footer>
+
+<div class="fab"><a class="wa" target="_blank" title="WhatsApp" href="https://wa.me/967781733795">💬</a><a class="mail" title="Email" href="mailto:7a8b1d@gmail.com">✉️</a></div>
+
+<nav class="nav"><div class="navin">
+  <button data-nav="home" class="act" onclick="go('home')"><b>🏠</b><span data-i="nHome">الرئيسية</span></button>
+  <button data-nav="list" onclick="openSystems()"><b>🏥</b><span data-i="nSys">التصنيفات</span></button>
+  <button data-nav="ai" onclick="go('ai')"><b>🤖</b><span data-i="nAi">المساعد</span></button>
+  <button data-nav="msgs" onclick="go('msgs')"><b>💬</b><span data-i="nMsg">الرسائل</span></button>
+  <button data-nav="more" onclick="go('more')"><b>⚙️</b><span data-i="nMore">المزيد</span></button>
+</div></nav>
+
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<input type="file" id="imgPicker" accept="image/*" hidden>
+<script src="drugs-data.js"></script>
+<script>
+/* ============ APH State ============ */
+const LS={db:'aph_db_v3',fav:'aph_favs',msg:'aph_msgs',lang:'aph_lang',pin:'aph_pin',admin:'aph_admin'};
+let lang=localStorage.getItem(LS.lang)||'ar';
+let DB=loadDB(), FAVS=JSON.parse(localStorage.getItem(LS.fav)||'[]'), MSGS=JSON.parse(localStorage.getItem(LS.msg)||'[]');
+let isAdmin=localStorage.getItem(LS.admin)==='1';
+let curSystem=null,curSub=null,curDrug=null,imgTarget=null;
+const $=id=>document.getElementById(id);
+function saveDB(){try{localStorage.setItem(LS.db,JSON.stringify(DB))}catch(e){alert('مساحة التخزين ممتلئة — صغّر الصور أو احذف بيانات. Storage full.')}}
+function loadDB(){try{const r=localStorage.getItem(LS.db);if(r){const d=JSON.parse(r);if(d.drugs&&d.drugs.length)return d}}catch(e){} return JSON.parse(JSON.stringify(window.APH_SEED))}
+function pin(){return localStorage.getItem(LS.pin)||'1234'}
+const ICONS={nervous:'🧠',cardiovascular:'❤️',blood:'🩸',respiratory:'🫁',gi:'🧪',hepatobiliary:'🟤',endocrine:'⚖️',renal:'💧',reproductive:'🌸',musculoskeletal:'🦴',skin:'🧴',eye:'👁️',ent:'👂',immune:'🛡️',antiinfective:'🦠',oncology:'🎗️',emergency:'🚨',misc:'🔬'};
+
+/* ============ i18n ============ */
+const T={ar:{tagline:'موسوعة الأدوية اليمنية والعربية',heroT:'ابحث عن أي دواء…',search:'بحث',byPhoto:'بحث بصورة الدواء (Google Lens)',aiBtn:'اسأل المساعد الدوائي',addDrug:'إضافة دواء',favs:'المفضلة',systems:'تصنيف الأدوية حسب أجهزة الجسم',sampleDrugs:'أدوية شائعة',back:'رجوع',aiT:'المساعد الدوائي الذكي',ask:'اسأل',addT:'إضافة دواء يدوياً / استيراد قاعدة بيانات',manualAdd:'إضافة يدوية (تُحفظ دائماً على جهازك)',indic:'الاستخدامات',dose:'الجرعة المعتادة',warn:'تحذيرات',drugImg:'صورة الدواء',save:'حفظ الدواء',importT:'استيراد CSV / Excel (.xlsx) / JSON',imgImport:'استيراد صور',msgsT:'رسائل المستخدمين والإدارة',send:'إرسال',adminReply:'رد الإدارة',moreT:'المزيد والإدارة',adminPanel:'لوحة تحكم الموقع',onlineT:'الإنترنت والمصادر الموثوقة',adminMode:'وضع الإدارة (تعديل البيانات والصور)',reset:'استعادة قاعدة البداية',rights:'جميع الحقوق محفوظة للدكتور',nHome:'الرئيسية',nSys:'التصنيفات',nAi:'المساعد',nMsg:'الرسائل',nMore:'المزيد'},
+en:{tagline:'Yemen & Arab Drug Encyclopedia',heroT:'Search any medicine…',search:'Search',byPhoto:'Search by drug photo (Google Lens)',aiBtn:'Ask AI pharmacist',addDrug:'Add drug',favs:'Favorites',systems:'Drugs by Body System',sampleDrugs:'Popular medicines',back:'Back',aiT:'Smart Drug Assistant',ask:'Ask',addT:'Add manually / Import database',manualAdd:'Manual add (saved permanently on device)',indic:'Indications',dose:'Usual dose',warn:'Warnings',drugImg:'Drug image',save:'Save drug',importT:'Import CSV / Excel (.xlsx) / JSON',imgImport:'Import images',msgsT:'Community & Admin messages',send:'Send',adminReply:'Admin reply',moreT:'More & Admin',adminPanel:'Website Admin Panel',onlineT:'Internet & trusted sources',adminMode:'Admin mode (edit data & images)',reset:'Reset starter DB',rights:'All rights reserved to Dr.',nHome:'Home',nSys:'Systems',nAi:'Assistant',nMsg:'Messages',nMore:'More'}};
+function applyLang(){const t=T[lang];document.querySelectorAll('[data-i]').forEach(e=>{const k=e.dataset.i;if(t[k])e.textContent=t[k]});
+ $('htmlRoot').lang=lang;$('htmlRoot').dir=lang==='ar'?'rtl':'ltr';$('langBtn').textContent=lang==='ar'?'EN':'عربي';localStorage.setItem(LS.lang,lang)}
+$('langBtn').onclick=()=>{lang=lang==='ar'?'en':'ar';applyLang();renderHome()};
+function L(ar,en){return lang==='ar'?ar:en}
+
+/* ============ Fuzzy search ============ */
+function norm(s){return (s||'').toLowerCase().replace(/[ً-ٰٟ]/g,'').replace(/[إأآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/[^a-z0-9\u0600-\u06FF ]/g,' ').replace(/\s+/g,' ').trim()}
+function lev(a,b){const m=a.length,n=b.length;if(Math.abs(m-n)>3)return 9;const d=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]);for(let j=0;j<=n;j++)d[0][j]=j;for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[m][n]}
+function score(q,text){q=norm(q);text=norm(text);if(!text)return 0;if(text.includes(q))return 100-Math.min(20,text.length/10);const qw=q.split(' '),tw=text.split(' ');let s=0;for(const w of qw){let best=0;for(const t of tw){if(t.startsWith(w))best=Math.max(best,70);else{const dd=lev(w,t);if(dd===1)best=Math.max(best,55);else if(dd===2&&w.length>4)best=Math.max(best,38)}}s+=best}return s/qw.length}
+const ALIAS={'بنادول':'panadol','بندول':'panadol','بروفين':'brufen','فولتارين':'voltaren','كتافلام':'cataflam','اوجمنتين':'augmentin','اوغمنتين':'augmentin','فلاجيل':'flagyl','زيرتك':'zyrtec','لازيكس':'lasix','كونكور':'concor','نورفاسك':'norvasc','فياجرا':'viagra','ترامال':'tramal','ليريكا':'lyrica','نيكسيوم':'nexium','بلافيكس':'plavix','زاريلتو':'xarelto','اماريل':'amaryl','جلوكوفاج':'glucophage'};
+function searchDrugs(q){if(!norm(q))return[];for(const k in ALIAS){if(norm(q).includes(k)){q=ALIAS[k];break}}const res=[];for(const d of DB.drugs){let s=Math.max(score(q,d.genericEn),score(q,d.genericAr),score(q,d.atc));let hit='';for(const p of d.products){const ps=Math.max(score(q,p.brand),score(q,p.manufacturer),score(q,p.country));if(ps>s){s=ps;hit=p.brand}}if(s>=35)res.push({d,s,hit})}return res.sort((a,b)=>b.s-a.s).slice(0,30)}
+
+/* ============ Render ============ */
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function thumbHTML(x,big){return x.image?`<div class="thumb"${big?' style="width:84px;height:84px;flex-basis:84px;font-size:36px"':''}><img src="${x.image}" alt=""></div>`:`<div class="thumb"${big?' style="width:84px;height:84px;flex-basis:84px;font-size:36px"':''}>💊</div>`}
+function drugCard(d){return `<div class="card drug" onclick="openDrug(${d.id})">${thumbHTML(d)}<div style="flex:1"><b>${esc(d.genericEn)}</b> <span class="mut">${esc(d.genericAr)}</span><br><span class="tag">${esc(lang==='ar'?d.systemAr:d.systemEn)}</span> <span class="chip">${esc(lang==='ar'?d.subgroupAr:d.subgroupEn)}</span><br><span class="mut">${d.products.length} ${L('منتج تجاري','trade products')} • ATC ${esc(d.atc||'—')}</span></div><span>${FAVS.includes(d.id)?'⭐':'›'}</span></div>`}
+function renderHome(){$('sysGrid').innerHTML=DB.systems.map(s=>{const n=DB.drugs.filter(d=>d.systemId===s.id).length;return `<div class="sys" onclick="openSystem('${s.id}')"><div class="ic">${ICONS[s.id]||'💊'}</div><b>${lang==='ar'?s.ar:s.en}</b><span>${n} ${L('دواء','drugs')}</span></div>`}).join('');
+ $('popular').innerHTML=DB.drugs.slice(0,8).map(drugCard).join('');
+ const f=DB.drugs.filter(d=>FAVS.includes(d.id));$('favBox').innerHTML=f.length?f.map(drugCard).join(''):`<p class="mut">${L('لا مفضلة بعد — افتح أي دواء واضغط ☆','No favorites yet')}</p>`;
+ $('statsBox').textContent=`${DB.drugs.length} ${L('دواء علمي','generics')} • ${DB.drugs.reduce((a,d)=>a+d.products.length,0)} ${L('منتج تجاري','trade products')} • ${DB.systems.length} ${L('جهازاً','systems')} • v${DB.version}`;
+ $('pinState').textContent=isAdmin?L('مفعّل ✅','ON ✅'):L('غير مفعّل','OFF');$('adminBtn').textContent=isAdmin?L('إيقاف وضع الإدارة','Disable Admin'):L('تفعيل وضع الإدارة','Enable Admin')}
+function go(v){document.querySelectorAll('.view').forEach(x=>x.classList.remove('act'));$('v-'+v).classList.add('act');document.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('act',b.dataset.nav===v||(v==='detail'&&b.dataset.nav==='list')));window.scrollTo({top:0});if(v==='msgs')renderMsgs();if(v==='home')renderHome();if(v==='more')renderHome()}
+function openSystems(){curSystem=null;curSub=null;$('listTitle').textContent=L('كل التصنيفات (18 جهازاً)','All Systems (18)');$('subChips').innerHTML=DB.systems.map(s=>`<button class="chip" onclick="openSystem('${s.id}')">${ICONS[s.id]||''} ${lang==='ar'?s.ar:s.en}</button>`).join('');$('drugList').innerHTML=DB.drugs.map(drugCard).join('');go('list')}
+function openSystem(id){curSystem=DB.systems.find(s=>s.id===id);curSub=null;const ds=DB.drugs.filter(d=>d.systemId===id);const subs=[...new Map(ds.map(d=>[lang==='ar'?d.subgroupAr:d.subgroupEn,d])).values()];
+ $('listTitle').textContent=`${ICONS[id]||''} ${lang==='ar'?curSystem.ar:curSystem.en} — ${ds.length}`;$('subChips').innerHTML=`<button class="chip" onclick="openSystem('${id}')">${L('الكل','All')}</button>`+subs.map(d=>`<button class="chip" onclick="filterSub('${id}','${encodeURIComponent(lang==='ar'?d.subgroupAr:d.subgroupEn)}')">${lang==='ar'?d.subgroupAr:d.subgroupEn}</button>`).join('');$('drugList').innerHTML=ds.map(drugCard).join('');go('list')}
+function filterSub(id,subEnc){const sub=decodeURIComponent(subEnc);const ds=DB.drugs.filter(d=>d.systemId===id&&(lang==='ar'?d.subgroupAr:d.subgroupEn)===sub);$('drugList').innerHTML=ds.map(drugCard).join('');window.scrollTo({top:0})}
+function doSearch(){const q=$('q').value.trim();if(!q)return;const r=searchDrugs(q);$('searchResults').innerHTML=`<h2 class="sec">🔎 ${L('نتائج','Results')}: ${esc(q)} (${r.length})</h2>`+(r.length?r.map(x=>drugCard(x.d)+(x.hit?`<p class="mut" style="margin:-6px 4px 8px">↳ ${L('طابق منتجاً','matched product')}: <b>${esc(x.hit)}</b></p>`:'')).join(''):`<div class="card"><p class="mut">${L('لا نتائج دقيقة. جرّب اسماً آخر، أو ابحث في Google:','No close match. Try Google:')}</p><div class="row"><button class="btn ghost sm" onclick="window.open('https://www.google.com/search?q=${encodeURIComponent(q+' drug')}','_blank')">Google</button><button class="btn ghost sm" onclick="fetchFDA('${encodeURIComponent(q)}',true)">openFDA</button></div></div>`)}
+function alternatives(d){let a=DB.drugs.filter(x=>x.id!==d.id&&x.systemId===d.systemId&&x.subgroupEn===d.subgroupEn);if(a.length<3)a=a.concat(DB.drugs.filter(x=>x.id!==d.id&&x.systemId===d.systemId&&!a.includes(x))).slice(0,6);return a}
+function openDrug(id){curDrug=DB.drugs.find(d=>d.id===id);if(!curDrug)return;const d=curDrug;const alts=alternatives(d);
+ const kv=(k,v)=>v?`<p class="kv"><b>${k}:</b> ${esc(v)}</p>`:'';
+ $('detailBox').innerHTML=`<div class="card"><div class="row">${thumbHTML(d,true)}<div style="flex:1"><h2 style="margin:0">${esc(d.genericEn)}</h2><div class="mut" style="font-size:15px">${esc(d.genericAr)}</div><span class="tag">${lang==='ar'?d.systemAr:d.systemEn}</span> <span class="chip">${lang==='ar'?d.subgroupAr:d.subgroupEn}</span> <span class="chip">ATC ${esc(d.atc||'—')}</span></div></div>
+ <div class="row" style="margin-top:10px"><button class="btn ghost sm" onclick="toggleFav(${d.id})">${FAVS.includes(d.id)?'⭐':'☆'} ${L('مفضلة','Favorite')}</button>
+ <button class="btn ghost sm" onclick="speak('${esc(d.genericEn)}')">🔊 EN</button>
+ <button class="btn ghost sm" onclick="window.open('https://www.google.com/search?q=${encodeURIComponent(d.genericEn+' drug uses dose')}','_blank')">🌐 Google</button>
+ <button class="btn ghost sm" onclick="window.open('https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=${encodeURIComponent(d.genericEn)}','_blank')">📖 DailyMed</button>
+ <button class="btn warn sm" onclick="fetchFDA('${encodeURIComponent(d.genericEn)}')">⬇ ${L('جلب البيانات الناقصة (openFDA)','Fetch missing (openFDA)')}</button>
+ ${isAdmin?`<button class="btn ghost sm" onclick="editDrug(${d.id})">✏️ ${L('تعديل الدواء','Edit drug')}</button><button class="btn ghost sm" onclick="changeImage('drug',${d.id})">🖼️ ${L('صورة الدواء','Drug image')}</button>`:''}</div>
+ ${kv(L('مقدمة','Introduction'),d.introduction)}${kv(L('آلية العمل','Mechanism'),d.mechanism)}${kv(L('الاستخدامات','Indications'),d.indications)}${kv(L('الجرعة المعتادة','Usual dose'),d.dosage)}${kv(L('التداخلات','Interactions'),d.interactions)}${kv(L('تحذيرات','Warnings'),d.warnings)}${kv(L('الحمل والرضاعة','Pregnancy'),d.pregnancy)}
+ <p class="mut">${L('المصدر','Source')}: ${esc(d.source||'APH')} • ${L('للتأكد الرسمي افتح DailyMed / openFDA أعلاه','verify via DailyMed/openFDA above')}</p></div>
+ <h2 class="sec">🏷️ ${L('المنتجات التجارية','Trade products')} (${d.products.length})</h2>
+ ${d.products.map(p=>`<div class="card prod"><div class="row">${thumbHTML(p)}<div style="flex:1"><b style="font-size:16px">${esc(p.brand)}</b> <span class="tag">${esc(p.strength||'')}</span> <span class="chip">${esc(p.form||'')}</span><br><span class="mut">🏭 ${esc(p.manufacturer||'—')} • 🌍 ${esc(p.country||'—')}<br>🇾🇪 ${L('الوكيل/المورد في اليمن','Agent in Yemen')}: <b>${esc(p.agentYemen||'—')}</b>${p.verified?' ✅':' <span class="tag">⚠ '+L('وكيل يحتاج توثيق','agent unverified')+'</span>'}</span></div></div>
+ <div class="row" style="margin-top:8px"><button class="btn ghost sm" onclick="window.open('https://www.google.com/search?tbm=isch&q=${encodeURIComponent(p.brand+' '+p.strength+' medicine')}','_blank')">🖼️ ${L('صور المنتج Google','Product images')}</button>
+ <button class="btn ghost sm" onclick="window.open('https://lens.google.com/uploadbyurl?url=${encodeURIComponent('https://www.google.com/search?q='+p.brand)}','_blank')">📷 Lens</button>
+ ${isAdmin?`<button class="btn ghost sm" onclick="editProduct(${d.id},${p.id})">✏️ ${L('تعديل','Edit')}</button><button class="btn ghost sm" onclick="changeImage('product',${p.id})">🖼️ ${L('صورة','Image')}</button><button class="btn danger sm" onclick="delProduct(${d.id},${p.id})">🗑</button>`:''}</div></div>`).join('')}
+ ${isAdmin?`<button class="btn" onclick="addProduct(${d.id})">➕ ${L('إضافة منتج تجاري','Add trade product')}</button>`:''}
+ <h2 class="sec">🔁 ${L('بدائل في نفس المجموعة','Alternatives (same group)')}</h2>${alts.length?alts.map(drugCard).join(''):`<p class="mut">—</p>`}
+ <div class="notice">${L('تنبيه: معلومات تعليمية. لا تستخدم أي دواء دون وصفة ومراجعة صيدلي، خصوصاً المضادات والمقيدة والأورام والطوارئ.','Educational only — always consult a physician/pharmacist.')}</div>`;
+ go('detail')}
+function toggleFav(id){FAVS=FAVS.includes(id)?FAVS.filter(x=>x!==id):[...FAVS,id];localStorage.setItem(LS.fav,JSON.stringify(FAVS));openDrug(id)}
+function speak(t){try{const u=new SpeechSynthesisUtterance(t);u.lang='en-US';speechSynthesis.speak(u)}catch(e){}}
+
+/* ============ Online: openFDA / Lens ============ */
+async function fetchFDA(enc,searchOnly){const name=decodeURIComponent(enc);sheet(`<h3>⬇ openFDA — ${esc(name)}</h3><p class="mut">${L('جارٍ الاتصال بقاعدة FDA الرسمية…','Contacting FDA…')}</p>`);
+ try{const r=await fetch(`https://api.fda.gov/drug/label.json?search=openfda.generic_name:"${encodeURIComponent(name)}"&limit=1`);const j=await r.json();const L0=j.results&&j.results[0];
+  if(!L0){sheet(`<h3>openFDA</h3><p>${L('لا نشرة مطابقة بهذا الاسم. جرّب الاسم العلمي الإنجليزي الدقيق.','No matching FDA label.')}</p><button class="btn" onclick="closeSheet()">OK</button>`);return}
+  const g=(a)=>a&&a[0]?a[0].slice(0,1400):'';const ind=g(L0.indications_and_usage),warn=g(L0.warnings),dos=g(L0.dosage_and_administration);
+  sheet(`<h3>${esc(name)} — FDA Label</h3><div style="max-height:55vh;overflow:auto;font-size:12px;line-height:1.9"><b>Indications:</b> ${esc(ind)}<hr><b>Dosage:</b> ${esc(dos)}<hr><b>Warnings:</b> ${esc(warn)}</div>
+  ${curDrug&&!searchOnly?`<button class="btn" onclick='applyFDA(${JSON.stringify({ind,dos,warn}).replace(/'/g,"&#39;")})'>${L('حفظ البيانات الناقصة في هذا الدواء','Save into this drug')}</button>`:''} <button class="btn ghost" onclick="closeSheet()">${L('إغلاق','Close')}</button>`)}
+ catch(e){sheet(`<h3>⚠ ${L('لا اتصال','Offline')}</h3><p class="mut">${L('تعذر الاتصال بـ openFDA — أنت غير متصل أو الخدمة محجوبة. بياناتك المحلية تعمل كاملة.','Cannot reach openFDA. Local DB still works fully.')}</p><button class="btn" onclick="closeSheet()">OK</button>`)}}
+function applyFDA(o){if(!curDrug)return;if(o.ind&&!curDrug.indications)curDrug.indications=o.ind.slice(0,900);if(o.dos&&!curDrug.dosage)curDrug.dosage=o.dos.slice(0,900);if(o.warn)curDrug.warnings=((curDrug.warnings||'')+' | FDA: '+o.warn.slice(0,700)).slice(0,1500);curDrug.source='openFDA label (fetched online)';saveDB();closeSheet();openDrug(curDrug.id);alert(L('تم الحفظ دائماً على الجهاز','Saved permanently'))}
+function lensFile(inp){if(!inp.files||!inp.files[0])return;window.open('https://lens.google.com','_blank');alert(L('فُتح Google Lens: ارفع نفس الصورة هناك للبحث العالمي عن الدواء. داخل التطبيق استخدم بحث Google بالاسم التجاري الظاهر على العلبة أيضاً.','Google Lens opened — upload the same photo there.'))}
+function pickImage(){window.open('https://lens.google.com','_blank')}
+
+/* ============ Admin CRUD + images ============ */
+function toggleAdmin(){if(isAdmin){isAdmin=false;localStorage.setItem(LS.admin,'0');renderHome();alert(L('أُوقف وضع الإدارة','Admin OFF'))}else{if(prompt(L('أدخل PIN الإدارة (الافتراضي 1234)','Enter admin PIN (default 1234)'))===pin()){isAdmin=true;localStorage.setItem(LS.admin,'1');renderHome();alert(L('وضع الإدارة مفعّل — يمكنك تعديل كل دواء ومنتج وصورة','Admin ON'))}else alert('PIN ❌')}}
+function changePin(){if(prompt('PIN الحالي / Current PIN')!==pin())return alert('❌');const n=prompt('PIN الجديد / New PIN (4+ أرقام)');if(n&&n.length>=4){localStorage.setItem(LS.pin,n);alert('✅')}}
+function sheet(h){$('sheet').innerHTML=h;$('modal').classList.add('open')} function closeSheet(){$('modal').classList.remove('open')} $('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeSheet()});
+function field(id,label,val,ta){return `<label class="f">${label}</label>${ta?`<textarea class="in" id="${id}">${esc(val||'')}</textarea>`:`<input class="in" id="${id}" value="${esc(val||'') }">`}`}
+function editDrug(id){const d=DB.drugs.find(x=>x.id===id);sheet(`<h3>✏️ ${esc(d.genericEn)}</h3>${field('e_en','Generic EN',d.genericEn)}${field('e_ar','Generic AR',d.genericAr)}${field('e_sgE','Subgroup EN',d.subgroupEn)}${field('e_sgA','Subgroup AR',d.subgroupAr)}${field('e_atc','ATC',d.atc)}${field('e_ind',L('الاستخدامات','Indications'),d.indications,1)}${field('e_dose',L('الجرعة','Dose'),d.dosage,1)}${field('e_int',L('التداخلات','Interactions'),d.interactions,1)}${field('e_warn',L('تحذيرات','Warnings'),d.warnings,1)}<div class="row" style="margin-top:12px"><button class="btn" onclick="saveDrug(${id})">${L('حفظ دائم','Save')}</button><button class="btn danger" onclick="delDrug(${id})">${L('حذف الدواء','Delete')}</button><button class="btn ghost" onclick="closeSheet()">${L('إلغاء','Cancel')}</button></div>`)}
+function saveDrug(id){const d=DB.drugs.find(x=>x.id===id);Object.assign(d,{genericEn:$('e_en').value,genericAr:$('e_ar').value,subgroupEn:$('e_sgE').value,subgroupAr:$('e_sgA').value,atc:$('e_atc').value,indications:$('e_ind').value,dosage:$('e_dose').value,interactions:$('e_int').value,warnings:$('e_warn').value});saveDB();closeSheet();openDrug(id)}
+function delDrug(id){if(!confirm(L('حذف هذا الدواء نهائياً؟','Delete this drug?')))return;DB.drugs=DB.drugs.filter(x=>x.id!==id);saveDB();closeSheet();go('home')}
+function productForm(did,p){sheet(`<h3>${p?'✏️':'➕'} ${L('منتج تجاري','Trade product')}</h3>${field('p_brand','Brand *',p?p.brand:'')}${field('p_str','Strength',p?p.strength:'')}${field('p_form','Form (Tablet/Capsule…)',p?p.form:'')}${field('p_mfr','Manufacturer',p?p.manufacturer:'')}${field('p_cty','Country',p?p.country:'')}${field('p_agent',L('الوكيل في اليمن','Agent Yemen'),p?p.agentYemen:'')}<label class="f"><input type="checkbox" id="p_ver" ${p&&p.verified?'checked':''}> ${L('الوكيل موثّق','Agent verified')}</label><div class="row" style="margin-top:12px"><button class="btn" onclick="saveProduct(${did},${p?p.id:'null'})">${L('حفظ','Save')}</button><button class="btn ghost" onclick="closeSheet()">${L('إلغاء','Cancel')}</button></div>`)}
+function addProduct(did){productForm(did,null)} function editProduct(did,pid){const d=DB.drugs.find(x=>x.id===did);productForm(did,d.products.find(p=>p.id===pid))}
+function saveProduct(did,pid){const d=DB.drugs.find(x=>x.id===did);const v={brand:$('p_brand').value.trim(),strength:$('p_str').value,form:$('p_form').value,manufacturer:$('p_mfr').value,country:$('p_cty').value,agentYemen:$('p_agent').value,verified:$('p_ver').checked,source:'APH Admin (manual)',image:''};if(!v.brand)return alert('Brand *');
+ if(pid){Object.assign(d.products.find(p=>p.id===pid),v)}else{v.id=Math.max(0,...DB.drugs.flatMap(x=>x.products.map(p=>p.id)))+1;d.products.push(v)} saveDB();closeSheet();openDrug(did)}
+function delProduct(did,pid){if(!confirm('Delete?'))return;const d=DB.drugs.find(x=>x.id===did);d.products=d.products.filter(p=>p.id!==pid);saveDB();openDrug(did)}
+function changeImage(kind,id){imgTarget={kind,id};$('imgPicker').click()}
+$('imgPicker').addEventListener('change',e=>{const f=e.target.files[0];if(!f||!imgTarget)return;const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');const sc=Math.min(1,520/img.width);c.width=img.width*sc;c.height=img.height*sc;c.getContext('2d').drawImage(img,0,0,c.width,c.height);const url=c.toDataURL('image/jpeg',.72);
+ if(imgTarget.kind==='drug'){DB.drugs.find(d=>d.id===imgTarget.id).image=url}else{for(const d of DB.drugs){const p=d.products.find(p=>p.id===imgTarget.id);if(p){p.image=url;curDrug=d;break}}} saveDB();if(curDrug)openDrug(curDrug.id);alert(L('حُفظت الصورة دائماً داخل التطبيق','Image saved permanently'))};img.src=r.result};r.readAsDataURL(f);e.target.value=''});
+
+/* ============ Add manual + Import/Export ============ */
+function fillSysSelect(){$('f_sys').innerHTML=DB.systems.map(s=>`<option value="${s.id}">${lang==='ar'?s.ar:s.en}</option>`).join('')}
+function saveManual(){const en=$('f_en').value.trim();if(!en)return alert('Generic EN *');const sys=DB.systems.find(s=>s.id===$('f_sys').value);const id=Math.max(0,...DB.drugs.map(d=>d.id))+1;
+ const nd={id,genericEn:en,genericAr:$('f_ar').value,systemId:sys.id,systemEn:sys.en,systemAr:sys.ar,subgroupEn:$('f_sgE').value||'General',subgroupAr:$('f_sgA').value||'عام',atc:$('f_atc').value,introduction:'',mechanism:'',indications:$('f_ind').value,dosage:$('f_dose').value,interactions:'',warnings:$('f_warn').value,pregnancy:'',image:'',source:'APH Admin (manual)',products:[]};
+ const fi=$('f_img').files[0];const done=()=>{DB.drugs.push(nd);saveDB();alert(L('حُفظ الدواء دائماً','Drug saved permanently'));openDrug(id)};
+ if(fi){const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');const sc=Math.min(1,520/img.width);c.width=img.width*sc;c.height=img.height*sc;c.getContext('2d').drawImage(img,0,0,c.width,c.height);nd.image=c.toDataURL('image/jpeg',.72);done()};img.src=r.result};r.readAsDataURL(fi)}else done()}
+function parseCSV(text){const rows=[];let row=[],cur='',q=false;for(let i=0;i<text.length;i++){const c=text[i];if(q){if(c==='"'&&text[i+1]==='"'){cur+='"';i++}else if(c==='"')q=false;else cur+=c}else if(c==='"')q=true;else if(c===','){row.push(cur);cur=''}else if(c==='\n'){row.push(cur);rows.push(row);row=[];cur=''}else if(c!=='\r')cur+=c}if(cur||row.length){row.push(cur);rows.push(row)}const head=rows.shift().map(h=>h.trim());return rows.filter(r=>r.some(c=>c.trim())).map(r=>{const o={};head.forEach((h,i)=>o[h]=(r[i]||'').trim());return o})}
+function ingest(rows){let added=0,prods=0;const byKey={};DB.drugs.forEach(d=>byKey[norm(d.genericEn)]=d);
+ for(const r of rows){const en=r.genericEn||r.generic_en||r.nameEn||r['Generic EN']||'';if(!en)continue;let d=byKey[norm(en)];
+  if(!d){const sys=DB.systems.find(s=>s.id===(r.systemId||''))||DB.systems.find(s=>norm(s.en)===norm(r.systemEn||''))||DB.systems[17];d={id:Math.max(0,...DB.drugs.map(x=>x.id))+1,genericEn:en,genericAr:r.genericAr||r.generic_ar||'',systemId:sys.id,systemEn:sys.en,systemAr:sys.ar,subgroupEn:r.subgroupEn||'General',subgroupAr:r.subgroupAr||'عام',atc:r.atc||r.atcCode||'',introduction:r.introduction||'',mechanism:r.mechanism||r.mechanismOfAction||'',indications:r.indications||'',dosage:r.dosage||'',interactions:r.interactions||r.drugInteractions||'',warnings:r.warnings||'',pregnancy:r.pregnancy||'',image:r.image||'',source:r.source||'Imported file',products:[]};DB.drugs.push(d);byKey[norm(en)]=d;added++}
+  const brand=r.brand||r.brandName||r.brand_name||'';if(brand){d.products.push({id:Math.max(0,...DB.drugs.flatMap(x=>x.products.map(p=>p.id)))+1,brand,strength:r.strength||'',form:r.form||r.dosageForm||r.dosage_form||'',manufacturer:r.manufacturer||'',country:r.country||'',agentYemen:r.agentYemen||r.agent_yemen||'',image:r.productImage||'',source:r.source||'Imported file',verified:false});prods++}}
+ saveDB();return{added,prods}}
+async function importFile(inp){const f=inp.files[0];if(!f)return;$('impStatus').textContent=L('جارٍ الاستيراد…','Importing…');
+ try{let rows=[];if(/\.json$/i.test(f.name)){const j=JSON.parse(await f.text());rows=Array.isArray(j)?j:(j.drugs||[]);if(j.drugs){/* full APH JSON */let a=0;for(const d of j.drugs){if(!DB.drugs.find(x=>norm(x.genericEn)===norm(d.genericEn))){d.id=Math.max(0,...DB.drugs.map(x=>x.id))+1;DB.drugs.push(d);a++}}saveDB();$('impStatus').textContent=`✅ ${a} drugs imported (APH JSON)`;inp.value='';renderHome();return}}
+  else if(/\.csv$/i.test(f.name)){rows=parseCSV(await f.text())}
+  else{const buf=await f.arrayBuffer();const wb=XLSX.read(buf);const ws=wb.Sheets[wb.SheetNames[0]];rows=XLSX.utils.sheet_to_json(ws)}
+  const r=ingest(rows);$('impStatus').textContent=`✅ ${L('أُضيف','Added')} ${r.added} ${L('دواء و','drugs &')} ${r.prods} ${L('منتجاً — محفوظ دائماً','products — saved permanently')}`;renderHome()}
+ catch(e){$('impStatus').textContent='❌ '+e.message} inp.value=''}
+function exportDB(kind){let blob,name;if(kind==='json'){blob=new Blob([JSON.stringify(DB,null,1)],{type:'application/json'});name='aph-database.json'}
+ else{const head='genericEn,genericAr,systemId,subgroupEn,subgroupAr,atc,indications,dosage,warnings,brand,strength,form,manufacturer,country,agentYemen\n';const q=v=>`"${(v||'').replace(/"/g,'""')}"`;let csv=head;for(const d of DB.drugs){if(!d.products.length)csv+=[d.genericEn,d.genericAr,d.systemId,d.subgroupEn,d.subgroupAr,d.atc,d.indications,d.dosage,d.warnings,'','','','','',''].map(q).join(',')+'\n';for(const p of d.products)csv+=[d.genericEn,d.genericAr,d.systemId,d.subgroupEn,d.subgroupAr,d.atc,d.indications,d.dosage,d.warnings,p.brand,p.strength,p.form,p.manufacturer,p.country,p.agentYemen].map(q).join(',')+'\n'}blob=new Blob(['\ufeff'+csv],{type:'text/csv'});name='aph-database.csv'}
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click()}
+function downloadTemplate(){const csv='genericEn,genericAr,systemId,subgroupEn,subgroupAr,atc,indications,dosage,warnings,brand,strength,form,manufacturer,country,agentYemen\nIbuprofen,إيبوبروفين,musculoskeletal,NSAIDs,مضادات التهاب,M01AE01,Pain and inflammation,200-400 mg q6-8h,Ulcer and kidney risk,Brufen,400 mg,Tablet,Abbott,Egypt,NATCO\n';const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv'}));a.download='aph-import-template.csv';a.click()}
+function resetDB(){if(!confirm(L('استعادة قاعدة البداية وحذف تعديلاتك المحلية؟','Reset to starter DB?')))return;localStorage.removeItem(LS.db);DB=loadDB();saveDB();renderHome();alert('✅')}
+
+/* ============ Messages ============ */
+function renderMsgs(){$('msgList').innerHTML=MSGS.slice().reverse().map(m=>`<div class="card msg ${m.admin?'admin':''}"><b>${m.admin?'🛡️ APH Admin — د. عبدالمجيد':esc(m.name||'User')}</b> <span class="mut">${new Date(m.ts).toLocaleString(lang==='ar'?'ar-YE':'en')}</span><p class="kv">${esc(m.body)}</p></div>`).join('')||`<p class="mut">${L('لا رسائل بعد','No messages yet')}</p>`}
+function postMsg(admin){const body=(admin?prompt(L('اكتب رد الإدارة الرسمي:','Write official admin reply:')):$('m_body').value).trim();if(!body)return;const name=admin?'APH Admin':($('m_name').value.trim()||L('مستخدم','User'));MSGS.push({name,body,admin,ts:Date.now()});localStorage.setItem(LS.msg,JSON.stringify(MSGS));if(!admin)$('m_body').value='';renderMsgs();alert(L('نُشرت الرسالة وستظهر لجميع مستخدمي هذا الجهاز. للمزامنة بين كل المستخدمين اربط الخادم من لوحة التحكم (انظر الدليل).','Posted locally. Connect server sync via Admin Panel to show on all devices.'))}
+function adminReplyPrompt(){if(prompt('Admin PIN')!==pin())return alert('PIN ❌');postMsg(true)}
+
+/* ============ AI assistant ============ */
+function aiAnswer(q){const res=searchDrugs(q);const wantsAlt=/بديل|بدائل|alternative|substitute/i.test(q);const wantsSys=/أدوية (الضغط|السكري|القلب)|hypertension drugs|pressure drugs/i.test(q);
+ if(wantsSys){const sys=DB.drugs.filter(d=>d.systemId==='cardiovascular');return L('أدوية القلب والضغط في قاعدة APH:\n','Cardiovascular drugs in APH:\n')+sys.map(d=>'• '+d.genericEn+' ('+d.genericAr+')').join('\n')+L('\nافتح أي دواء لجرعته وتحذيراته ومنتجاته في اليمن.','\nOpen any drug for dose, warnings and Yemen products.')}
+ if(!res.length)return L('لم أجد دواءً مطابقاً في القاعدة المحلية. جرّب الاسم العلمي الإنجليزي، أو استخدم أزرار Google / DailyMed / openFDA في الأعلى للبحث العالمي الموثوق.','No match in local DB. Try the English generic name or trusted online sources above.');
+ const d=res[0].d;let out=`💊 ${d.genericEn} — ${d.genericAr}\n`;
+ if(/جرع|dose|dosage/i.test(q))out+=L('الجرعة المعتادة: ','Dose: ')+(d.dosage||'—');
+ else if(/تداخل|interaction/i.test(q))out+=L('التداخلات: ','Interactions: ')+(d.interactions||'—');
+ else if(/حمل|pregnan/i.test(q))out+=L('الحمل: ','Pregnancy: ')+(d.pregnancy||'—');
+ else if(/تحذير|تحذيرات|warning|أعراض|side/i.test(q))out+=L('تحذيرات: ','Warnings: ')+(d.warnings||'—');
+ else out+=L('الاستخدامات: ','Indications: ')+(d.indications||'—')+L('\nالجرعة: ','\nDose: ')+(d.dosage||'—');
+ out+=L(`\nالمنتجات في اليمن/العرب: `,'\nProducts: ')+d.products.map(p=>`${p.brand} ${p.strength} (${p.manufacturer||''} – ${p.country||''} – وكيل اليمن: ${p.agentYemen||'—'})`).join('، ');
+ if(wantsAlt){const a=alternatives(d);out+=L('\n\n🔁 بدائل نفس المجموعة: ','\n\nAlternatives: ')+(a.map(x=>x.genericEn).join('، ')||'—')}
+ out+=L('\n\n📚 مصادر للتحقق: DailyMed و openFDA (من صفحة الدواء). معلومات تعليمية فقط.','\n\nVerify on DailyMed/openFDA from the drug page. Educational only.');
+ setTimeout(()=>openDrug(d.id),50);return out}
+function bubble(txt,me){const el=document.createElement('div');el.className='bubble '+(me?'me':'bot');el.textContent=txt;$('chatLog').appendChild(el);el.scrollIntoView({behavior:'smooth'})}
+function askAI(){const q=$('aiQ').value.trim();if(!q)return;bubble(q,true);$('aiQ').value='';setTimeout(()=>bubble(aiAnswer(q),false),150)}
+function quickAI(b){$('aiQ').value=b.textContent;askAI()}
+
+/* ============ Net + boot ============ */
+function netUI(){$('netBadge').textContent=navigator.onLine?'🟢 Online':'🔴 Offline';$('netBadge').classList.toggle('on',navigator.onLine)}
+window.addEventListener('online',netUI);window.addEventListener('offline',netUI);
+$('q').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch()});$('aiQ').addEventListener('keydown',e=>{if(e.key==='Enter')askAI()});
+applyLang();fillSysSelect();renderHome();netUI();bubble(L('مرحباً بك في مساعد APH الدوائي 🤖 اسألني عن جرعة أي دواء أو بدائله أو تداخلاته — أو مثال: «جرعة الميتفورمين».','Welcome to APH assistant. Ask about dose, alternatives or interactions.'),false);
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+</script>
+</body>
+</html>
