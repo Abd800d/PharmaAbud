@@ -33,10 +33,21 @@ jobs:
         run: flutter pub get
 
       - name: Analyze (non-blocking)
-        run: flutter analyze || true
+        run: flutter analyze 2>&1 | tee analyze-log.txt || true
 
       - name: Build release APK
-        run: flutter build apk --release
+        run: |
+          set -o pipefail
+          flutter build apk --release 2>&1 | tee build-log.txt
+
+      - name: Upload build logs (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aph-build-logs
+          path: |
+            analyze-log.txt
+            build-log.txt
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
