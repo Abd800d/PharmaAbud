@@ -40,6 +40,12 @@ jobs:
           set -o pipefail
           flutter build apk --release 2>&1 | tee build-log.txt
 
+      - name: Publish errors as annotations
+        if: always()
+        run: |
+          { grep -E "error:|Error|FAILURE|e: file|Target" analyze-log.txt build-log.txt 2>/dev/null || true; } | head -30 | cut -c1-240 | while IFS= read -r l; do echo "::error::$l"; done
+          tail -40 build-log.txt >> "$GITHUB_STEP_SUMMARY" || true
+
       - name: Upload build logs (always)
         if: always()
         uses: actions/upload-artifact@v4
