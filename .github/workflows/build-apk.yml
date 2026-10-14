@@ -30,21 +30,29 @@ jobs:
           channel: "stable"
 
       - name: Generate platform scaffolding
-        run: flutter create --platforms=android --project-name aph_mobile .
+        run: |
+          set -o pipefail
+          flutter create --platforms=android --project-name aph_mobile . 2>&1 | tee /tmp/build.log
 
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          set -o pipefail
+          flutter pub get 2>&1 | tee -a /tmp/build.log
 
       - name: Analyze
-        run: flutter analyze --no-fatal-infos || true
+        run: |
+          set -o pipefail
+          (flutter analyze --no-fatal-infos || true) 2>&1 | tee -a /tmp/build.log
 
       - name: Run tests
-        run: flutter test
+        run: |
+          set -o pipefail
+          flutter test 2>&1 | tee -a /tmp/build.log
 
       - name: Build release APK
         run: |
           set -o pipefail
-          flutter build apk --release 2>&1 | tee /tmp/build.log
+          flutter build apk --release 2>&1 | tee -a /tmp/build.log
 
       - name: Publish failure tail as annotations
         if: failure()
