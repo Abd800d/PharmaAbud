@@ -97,14 +97,9 @@ jobs:
         run: |
           TAG="apk-v1.0.0"
           APK="build/app/outputs/flutter-apk/app-release.apk"
+          NOTES="AbdulmajeedPharma (APH) Android release build v1.0.0+1. Contains clearly-marked DEMO / DEVELOPMENT seed data — not for clinical use. Owner: Dr. Abdulmajeed Abdullah Almakhedhi. Support: WhatsApp 781733795 · 7a8b1d@gmail.com"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" "$APK" \
-              --title "APH Mobile APK v1.0.0" \
-              --notes "AbdulmajeedPharma (APH) Android release build v1.0.0+1.
-
-Contains clearly-marked DEMO / DEVELOPMENT seed data — not for clinical use.
-Owner: Dr. Abdulmajeed Abdullah Almakhedhi.
-Support: WhatsApp 781733795 · 7a8b1d@gmail.com"
+            gh release create "$TAG" "$APK" --title "APH Mobile APK v1.0.0" --notes "$NOTES"
           else
             gh release upload "$TAG" "$APK" --clobber
           fi
