@@ -3,7 +3,6 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:share_plus/share_plus.dart' show Share, XFile;
 import 'package:path_provider/path_provider.dart';
 import '../app_settings.dart';
 import '../db/db_helper.dart';
@@ -684,6 +683,13 @@ class _MoreTabState extends State<_MoreTab> {
           ]),
           const SizedBox(height: 8),
           Text(S.t('Works fully offline. Online features activate automatically when connected.',
+                  'يعمل بالكامل دون إنترنت، وتتفعّل مزايا الإنترنت تلقائياً عند الاتصال.'),
+              style: const TextStyle(fontSize: 11, color: Colors.white60, height: 1.8)),
+        ]))),
+    ]);
+  }
+}
+ Online features activate automatically when connected.',
                   'يعمل بالكامل دون إنترنت، وتتفعّل مزايا الإنترنت تلقائياً عند الاتصال.'),
               style: const TextStyle(fontSize: 11, color: Colors.white60, height: 1.8)),
         ]))),
