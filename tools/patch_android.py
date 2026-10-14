@@ -19,3 +19,14 @@ if "android.permission.INTERNET" not in t:
 t = re.sub(r'android:label="[^"]*"', 'android:label="AbdulmajeedPharma"', t)
 m.write_text(t, encoding="utf-8")
 print("AndroidManifest patched: label=AbdulmajeedPharma + permissions")
+
+# أيقونة APH الاحترافية (تُنسخ فوق أيقونة Flutter الافتراضية إن وجدت)
+import shutil
+src_root = pathlib.Path("tools/launcher_icons")
+res = pathlib.Path("android/app/src/main/res")
+if src_root.exists() and res.exists():
+    for folder in src_root.iterdir():
+        dest = res / folder.name
+        if dest.exists():
+            shutil.copy(folder / "ic_launcher.png", dest / "ic_launcher.png")
+    print("APH launcher icon applied")
