@@ -5,6 +5,8 @@
 /// server data blindly — conflicts are reported for client-side resolution.
 import 'dart:convert';
 
+import 'package:sqflite/sqflite.dart';
+
 import '../../core/database/local_database.dart';
 import '../../core/network/api_client.dart';
 
