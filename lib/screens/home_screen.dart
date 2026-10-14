@@ -571,10 +571,15 @@ class _MoreTabState extends State<_MoreTab> {
 
   Future<void> _shareExport() async {
     final json = await ImportService.exportJson();
-    final dir = await getTemporaryDirectory();
+    final dir = await getApplicationDocumentsDirectory();
     final f = File('${dir.path}/aph-database.json');
     await f.writeAsString(json);
-    await Share.shareXFiles([XFile(f.path)], text: 'APH database export');
+    await Clipboard.setData(ClipboardData(text: json));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(S.t('Exported to aph-database.json and copied to clipboard',
+              'صُدّرت القاعدة إلى aph-database.json ونُسخت للحافظة'))));
+    }
   }
 
   @override
