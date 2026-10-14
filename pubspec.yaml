@@ -1,7 +1,7 @@
 name: pharma_encyclopedia
-description: "موسوعة الأدوية - إعداد د. عبدالمجيد الماخذي"
+description: "AbdulmajeedPharma (APH) — موسوعة الأدوية اليمنية والعربية | Dr. Abdulmajeed Abdullah Almakhedhi"
 publish_to: 'none'
-version: 1.0.0+1
+version: 3.0.0+3
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -13,13 +13,15 @@ dependencies:
   path: ^1.9.0
   path_provider: ^2.1.3
   csv: ^6.0.0
-  file_picker: ^8.0.0
-  flutter_tts: ^4.0.2
+  excel: ^4.0.6
+  file_picker: ^8.1.2
   image_picker: ^1.1.2
-  http: ^1.2.1
-  connectivity_plus: ^6.0.3
-  cached_network_image: ^3.3.1
-  intl: ^0.19.0
+  http: ^1.2.2
+  connectivity_plus: ^6.0.5
+  url_launcher: ^6.3.1
+  flutter_tts: ^4.0.2
+  shared_preferences: ^2.3.2
+  share_plus: ^10.1.2
 
 dev_dependencies:
   flutter_test:
@@ -29,4 +31,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/data/drugs_seed.json
     - assets/images/

@@ -1,4 +1,4 @@
-generic_name_en,generic_name_ar,brand_name,manufacturer,country,strength,dosage_form,system,atc_code,introduction,mechanism_of_action,drug_interactions,image_path
-Ibuprofen,إيبوبروفين,Advil,Pfizer,USA,200 mg,Tablet,مسكنات ومضادات التهاب,M01AE01,مسكن للألم ومضاد للالتهاب,يثبط إنزيمات السيكلوأوكسيجيناز,يزيد خطر النزيف مع مضادات التخثر,
-Ibuprofen,إيبوبروفين,Brufen,Abbott,Egypt,400 mg,Tablet,مسكنات ومضادات التهاب,M01AE01,مسكن للألم ومضاد للالتهاب,يثبط إنزيمات السيكلوأوكسيجيناز,يزيد خطر النزيف مع مضادات التخثر,
-Metformin,ميتفورمين,Glucophage,Merck,Germany,850 mg,Tablet,الغدد الصماء والسكري,A10BA02,دواء أساسي لعلاج السكري النوع الثاني,يقلل إنتاج الجلوكوز في الكبد,قد يسبب حماض لبني مع الفشل الكلوي,
+genericEn,genericAr,systemId,subgroupEn,subgroupAr,atc,indications,dosage,warnings,brand,strength,form,manufacturer,country,agentYemen
+Ibuprofen,إيبوبروفين,musculoskeletal,NSAIDs,مضادات التهاب غير ستيرويدية,M01AE01,Pain fever and inflammation,200-400 mg every 6-8 hours with food,Ulcer kidney and heart risk with high doses,Brufen,400 mg,Tablet,Abbott,Egypt,NATCO
+Metformin,ميتفورمين,endocrine,Biguanides,بيغوانيدات,A10BA02,Type 2 diabetes,500 mg twice daily with meals,Rare lactic acidosis in severe kidney failure,Glucophage,850 mg,Tablet,Merck,Germany,NATCO
+Omeprazole,أوميبرازول,gi,Proton Pump Inhibitors,مثبطات مضخة البروتون,A02BC01,Reflux and peptic ulcer,20 mg once daily before breakfast,Long-term magnesium and B12 deficiency,Losec,20 mg,Capsule,AstraZeneca,United Kingdom,NATCO
