@@ -33,6 +33,10 @@ jobs:
         run: |
           set -o pipefail
           flutter create --platforms=android --project-name aph_mobile . 2>&1 | tee /tmp/build.log
+          # flutter create can clobber tracked files (e.g. test/widget_test.dart) —
+          # restore them; we only want the untracked android/ scaffolding.
+          git checkout -- .
+          git status --short | head -20
 
       - name: Install dependencies
         run: |
@@ -47,7 +51,7 @@ jobs:
       - name: Run tests
         run: |
           set -o pipefail
-          flutter test 2>&1 | tee -a /tmp/build.log
+          flutter test --reporter expanded 2>&1 | tee -a /tmp/build.log
 
       - name: Build release APK
         run: |
@@ -59,9 +63,13 @@ jobs:
         run: |
           if [ -f /tmp/build.log ]; then
             echo "::group::Build log tail"
-            tail -n 60 /tmp/build.log
+            tail -n 80 /tmp/build.log
             echo "::endgroup::"
-            tail -n 25 /tmp/build.log | while IFS= read -r line; do
+            grep -E "Expected:|Actual:|TestFailure|EXCEPTION|which:|-[0-9]+:.*\[E\]|loading .*widget_test|error:|Error:|FAILURE|What went wrong" /tmp/build.log | head -30 | while IFS= read -r line; do
+              echo "::error::${line}"
+            done
+            echo "::error::=== last 12 lines ==="
+            tail -n 12 /tmp/build.log | while IFS= read -r line; do
               echo "::error::${line}"
             done
           fi

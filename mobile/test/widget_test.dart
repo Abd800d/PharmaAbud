@@ -30,7 +30,8 @@ Widget _harness(Widget child, {Locale locale = const Locale('en')}) {
 void main() {
   testWidgets('EmptyState renders message and icon', (WidgetTester tester) async {
     await tester.pumpWidget(_harness(const EmptyState(message: 'No matching drug was found.')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('No matching drug was found.'), findsOneWidget);
     expect(find.byIcon(Icons.search_off), findsOneWidget);
   });
@@ -41,7 +42,8 @@ void main() {
       message: 'Network error — please check your connection.',
       onRetry: () => tapped++,
     )));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Network error — please check your connection.'), findsOneWidget);
     expect(find.byIcon(Icons.error_outline), findsOneWidget);
     await tester.tap(find.byType(FilledButton));
@@ -50,7 +52,8 @@ void main() {
 
   testWidgets('LoadingSkeleton renders without platform channels', (WidgetTester tester) async {
     await tester.pumpWidget(_harness(const LoadingSkeleton(lines: 2)));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(LoadingSkeleton), findsOneWidget);
     expect(find.byType(Card), findsWidgets);
   });
@@ -60,7 +63,8 @@ void main() {
       const EmptyState(message: 'لم يتم العثور على دواء مطابق.'),
       locale: const Locale('ar'),
     ));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('لم يتم العثور على دواء مطابق.'), findsOneWidget);
     final BuildContext ctx = tester.element(find.byType(EmptyState));
     expect(AppLocalizations.of(ctx).isArabic, isTrue);
