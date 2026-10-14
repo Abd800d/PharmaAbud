@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, require_permission
@@ -17,6 +17,7 @@ from app.models import (
     ProductIngredient,
     ProductPackage,
     ProductSource,
+    RecordLink,
     Source,
     User,
     VerificationStatus,
@@ -176,11 +177,28 @@ def product_duplicates(product_id: str, db: Session = Depends(get_db)) -> dict:
         exclude_product_id=p.id,
     )
     return {
-        "note": "Possible duplicates require human review — records are never auto-merged.",
+        "note": "Possible duplicates require human review — records are never auto-merged (§16).",
         "matches": [{
             "kind": m.kind, "product_id": m.product_id, "product_label": m.product_label,
             "reasons": m.reasons, "confidence": m.confidence,
         } for m in matches],
+        "links": [
+            {
+                "id": l.id, "link_type": l.link_type,
+                "label": "Equivalent Product" if l.link_type == "equivalent" else "Duplicate Candidate",
+                "other_product_id": l.entity_b_id if l.entity_a_id == p.id else l.entity_a_id,
+                "status": l.status,
+                # §111 review metadata
+                "linked_by": l.linked_by, "why": l.why,
+                "checked_by": l.checked_by, "approved_by": l.approved_by,
+                "approval_date": l.approval_date.isoformat() if l.approval_date else None,
+            }
+            for l in db.scalars(
+                select(RecordLink).where(
+                    or_(RecordLink.entity_a_id == p.id, RecordLink.entity_b_id == p.id)
+                ).order_by(RecordLink.created_at.desc())
+            ).all()
+        ],
     }
 
 

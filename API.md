@@ -134,6 +134,25 @@ curl -X POST localhost:8000/api/v1/auth/login \
 | GET | `/audit-logs` | filters: `action` (contains), `entity_type`, `entity_id`, `user_id`, `date_from`, `date_to`; `sort=asc\|desc`; paging. Requires `audit.read`. Append-only — no write/delete endpoints exist. |
 | GET | `/audit-logs/export.csv` | CSV export of the filtered trail — requires `data.export`, audit-logged |
 
+## Record links — Equivalent Products & duplicate review (§11, §16, §111)
+
+Every link carries the §111 review metadata: **Linked by · Why · Checked By ·
+Approved By · Approval Date**. Links start `pending` and require human review —
+records are **never auto-merged**. The label is exactly **"Equivalent Product"**
+(product-record equivalence only — never clinical interchangeability, never
+therapeutic substitution advice).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/products/{id}/equivalents` | list links (public) + semantics note |
+| POST | `/products/{id}/equivalents?target_product_id=&why=&notes=` | create link (`why` required, starts `pending`); requires `product.edit` |
+| GET | `/record-links?status=&link_type=` | review queue with §111 metadata; requires `product.edit` |
+| POST | `/record-links/{id}/review?decision=approve\|reject&notes=` | sets Checked By (+ Approved By + Approval Date on approve); requires `product.verify` |
+| DELETE | `/record-links/{id}` | remove a link; requires `product.edit` |
+
+`GET /products/{id}/duplicates` also returns existing links with the §111
+metadata next to dynamic duplicate matches.
+
 ## Products — `/products`
 
 | Method | Path | Permission | Description |

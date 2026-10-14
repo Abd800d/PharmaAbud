@@ -274,7 +274,42 @@ export async function renderReview(root) {
     ${section("Pending Products", q.pending_products, "product")}
     ${section("Pending Drugs", q.pending_drugs, "drug")}
     ${section("Needs Update", q.needs_update, "drug")}
+    <div class="card">
+      <h3>Duplicate / Link Records (§16, §111)</h3>
+      <p class="muted">Records are never auto-merged. Review metadata: <strong>Linked by · Why · Checked By · Approved By · Approval Date</strong>.</p>
+      <div id="links-queue"></div>
+    </div>
   `;
+  const linksEl = root.querySelector("#links-queue");
+  async function loadLinks() {
+    const links = await api.recordLinks({ limit: 50 });
+    linksEl.innerHTML = links.items.length ? `
+      <table><thead><tr><th>Label</th><th>Records</th><th>Status</th><th>Linked By</th><th>Why</th><th>Checked By</th><th>Approved By</th><th>Approval Date</th><th></th></tr></thead>
+      <tbody>${links.items.map((l) => `
+        <tr>
+          <td>${esc(l.label)}</td>
+          <td>${esc(l.entity_a.label)} ↔ ${esc(l.entity_b.label)}</td>
+          <td>${statusBadge(l.status)}</td>
+          <td class="muted">${l.linked_by ? esc(l.linked_by.slice(0, 8)) + "…" : "—"}</td>
+          <td class="muted" style="font-size:12px">${esc(l.why)}</td>
+          <td class="muted">${l.checked_by ? esc(l.checked_by.slice(0, 8)) + "…" : "—"}</td>
+          <td class="muted">${l.approved_by ? esc(l.approved_by.slice(0, 8)) + "…" : "—"}</td>
+          <td>${l.approval_date ? fmtDate(l.approval_date) : "—"}</td>
+          <td>${l.status === "pending" ? `
+            <button class="btn btn-sm btn-success" data-lapprove="${l.id}">Approve</button>
+            <button class="btn btn-sm btn-secondary" data-lreject="${l.id}">Reject</button>` : ""}</td>
+        </tr>`).join("")}</tbody></table>
+      <p class="muted" style="margin-top:8px">${esc(links.policy)}</p>` : emptyState("No record links yet.");
+    linksEl.querySelectorAll("[data-lapprove]").forEach((b) => b.onclick = async () => {
+      try { await api.reviewLink(b.dataset.lapprove, "approve"); toast("Record link approved."); loadLinks(); }
+      catch (e) { toast(e.message, true); }
+    });
+    linksEl.querySelectorAll("[data-lreject]").forEach((b) => b.onclick = async () => {
+      try { await api.reviewLink(b.dataset.lreject, "reject"); toast("Record link rejected."); loadLinks(); }
+      catch (e) { toast(e.message, true); }
+    });
+  }
+  await loadLinks();
 }
 
 /* ------------------------------------------------------------- image review */

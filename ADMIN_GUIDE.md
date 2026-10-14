@@ -70,6 +70,15 @@ The comparison shows **differences and equivalences between records only** —
 it is NOT a therapeutic recommendation and NOT substitution advice.
 “Equivalent Product” never means clinically interchangeable.
 
+### Record Links — Equivalents & Duplicates (§11, §16, §111)
+Products → **View** opens the record with an **Equivalent Product** panel:
+link two products (the `why` is mandatory), then **Approve / Reject** in human
+review. Every link shows the §111 metadata columns: **Linked by · Why ·
+Checked By · Approved By · Approval Date**. The same queue appears under
+**Review Queue → Duplicate / Link Records**. Records are never auto-merged;
+the label is exactly “Equivalent Product” (record equivalence only — never
+clinical interchangeability).
+
 ### Users & Roles (§28)
 Assign the 7 roles (public_user, pharmacist_reviewer, data_manager,
 image_reviewer, translator, administrator, super_administrator). Role changes

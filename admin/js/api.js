@@ -86,6 +86,13 @@ export const api = {
   createProduct: (body) => request("POST", "/products", { body }),
   verifyProduct: (id, new_status, notes = "") => request("POST", `/products/${id}/verify`, { body: { new_status, notes } }),
   productDuplicates: (id) => request("GET", `/products/${id}/duplicates`),
+  equivalents: (id) => request("GET", `/products/${id}/equivalents`),
+  createEquivalent: (id, targetId, why, notes = "") =>
+    request("POST", `/products/${id}/equivalents`, { params: { target_product_id: targetId, why, notes } }),
+  recordLinks: (params = {}) => request("GET", "/record-links", { params }),
+  reviewLink: (id, decision, notes = "") =>
+    request("POST", `/record-links/${id}/review`, { params: { decision, notes } }),
+  deleteRecordLink: (id) => request("DELETE", `/record-links/${id}`),
 
   systems: () => request("GET", "/systems"),
   systemGroups: (id) => request("GET", `/systems/${id}/groups`),

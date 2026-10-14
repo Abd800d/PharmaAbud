@@ -121,6 +121,36 @@ class Favorite(Base, UUIDPk, Timestamped):
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
 
+class RecordLink(Base, UUIDPk, Timestamped):
+    """Duplicate / equivalence record links (§11, §16, §111).
+
+    `link_type="equivalent"` means product-record equivalence ONLY —
+    it is NEVER "therapeutic alternative" and NEVER clinical interchangeability.
+    Uncertain links are human-reviewed; records are never auto-merged (§16).
+
+    §111 review metadata is first-class: Linked by / Why / Checked By /
+    Approved By / Approval Date.
+    """
+
+    __tablename__ = "record_links"
+    __table_args__ = (
+        UniqueConstraint("link_type", "entity_a_id", "entity_b_id", name="uq_record_link"),
+    )
+
+    link_type: Mapped[str] = mapped_column(String(32), default="equivalent", nullable=False, index=True)  # equivalent|duplicate
+    entity_a_type: Mapped[str] = mapped_column(String(32), default="product", nullable=False)
+    entity_a_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    entity_b_type: Mapped[str] = mapped_column(String(32), default="product", nullable=False)
+    entity_b_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(32), default="pending", nullable=False, index=True)  # pending|approved|rejected
+    why: Mapped[str] = mapped_column(Text, default="", nullable=False)  # §111 "Why"
+    notes: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    linked_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    checked_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    approved_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    approval_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 class RecentSearch(Base, UUIDPk, Timestamped):
     __tablename__ = "recent_searches"
 

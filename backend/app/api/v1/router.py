@@ -13,6 +13,7 @@ from app.api.v1 import (
     imports,
     monograph,
     products,
+    record_links,
     reports,
     search,
     sync,
@@ -30,6 +31,7 @@ api_router.include_router(drugs.router)
 api_router.include_router(monograph.router)
 api_router.include_router(translations.router)
 api_router.include_router(favorites.router)
+api_router.include_router(record_links.router)
 api_router.include_router(products.router)
 api_router.include_router(taxonomy.router)
 api_router.include_router(search.router)

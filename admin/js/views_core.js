@@ -231,17 +231,100 @@ export async function renderProducts(root) {
           <button class="btn btn-secondary" id="p-close">Close</button>
         </div>
         <div id="p-dup-result"></div>
+        <div id="p-equiv" style="margin-top:18px"></div>
       </div>
     `;
+
+    /* ---- Equivalent Products (§11) + link review (§111) ---- */
+    async function loadEquivalents() {
+      const eqEl = detailEl.querySelector("#p-equiv");
+      const res = await api.equivalents(id);
+      eqEl.innerHTML = `
+        <h3>${esc(res.label)} (§11)</h3>
+        <p class="muted">${esc(res.note)}</p>
+        ${res.items.length ? `
+          <table><thead><tr><th>Products</th><th>Status</th><th>Linked By</th><th>Why</th><th>Checked By</th><th>Approved By</th><th>Approval Date</th><th></th></tr></thead>
+          <tbody>${res.items.map((l) => `
+            <tr>
+              <td>${esc(l.entity_a.label)} ↔ ${esc(l.entity_b.label)}</td>
+              <td>${statusBadge(l.status)}</td>
+              <td class="muted">${l.linked_by ? esc(l.linked_by.slice(0, 8)) + "…" : "—"}</td>
+              <td class="muted" style="font-size:12px">${esc(l.why)}</td>
+              <td class="muted">${l.checked_by ? esc(l.checked_by.slice(0, 8)) + "…" : "—"}</td>
+              <td class="muted">${l.approved_by ? esc(l.approved_by.slice(0, 8)) + "…" : "—"}</td>
+              <td>${l.approval_date ? fmtDate(l.approval_date) : "—"}</td>
+              <td>
+                ${l.status === "pending" ? `
+                  <button class="btn btn-sm btn-success" data-lapprove="${l.id}">Approve</button>
+                  <button class="btn btn-sm btn-secondary" data-lreject="${l.id}">Reject</button>` : ""}
+                <button class="btn btn-sm btn-secondary" data-ldel="${l.id}">Remove</button>
+              </td>
+            </tr>`).join("")}</tbody></table>`
+          : `<p class="muted">No Equivalent Product links yet.</p>`}
+        <div class="toolbar" style="margin-top:10px">
+          <input id="eq-target" placeholder="Target product ID or search below" style="min-width:260px" />
+          <input id="eq-why" placeholder="Why (required — §111)" style="min-width:220px" />
+          <button class="btn btn-primary" id="eq-add">Link as ${esc(res.label)}</button>
+          <button class="btn btn-secondary" id="eq-search">Search products…</button>
+        </div>
+        <div id="eq-search-results"></div>
+      `;
+      eqEl.querySelectorAll("[data-lapprove]").forEach((b) => b.onclick = async () => {
+        await api.reviewLink(b.dataset.lapprove, "approve"); toast("Equivalent Product approved."); loadEquivalents();
+      });
+      eqEl.querySelectorAll("[data-lreject]").forEach((b) => b.onclick = async () => {
+        await api.reviewLink(b.dataset.lreject, "reject"); toast("Equivalent Product rejected."); loadEquivalents();
+      });
+      eqEl.querySelectorAll("[data-ldel]").forEach((b) => b.onclick = async () => {
+        await api.deleteRecordLink(b.dataset.ldel); toast("Link removed."); loadEquivalents();
+      });
+      eqEl.querySelector("#eq-search").onclick = async () => {
+        const q = eqEl.querySelector("#eq-target").value.trim();
+        if (!q) return toast("Type a product name first.", true);
+        const found = await api.products({ q, limit: 6 });
+        eqEl.querySelector("#eq-search-results").innerHTML = found.items.length
+          ? `<table><tbody>${found.items.map((p2) => `
+              <tr><td><strong>${esc(p2.brand_name_en)}</strong> ${esc(p2.strength || "")}</td>
+              <td><button class="btn btn-sm btn-secondary" data-pick="${p2.id}" data-label="${esc(p2.brand_name_en)}">Pick</button></td></tr>`).join("")}</tbody></table>`
+          : `<p class="muted">No products match.</p>`;
+        eqEl.querySelectorAll("[data-pick]").forEach((b) => b.onclick = () => {
+          eqEl.querySelector("#eq-target").value = b.dataset.pick;
+          eqEl.querySelector("#eq-search-results").innerHTML = "";
+        });
+      };
+      eqEl.querySelector("#eq-add").onclick = async () => {
+        const target = eqEl.querySelector("#eq-target").value.trim();
+        const why = eqEl.querySelector("#eq-why").value.trim();
+        if (!target || !why) return toast("Target product and 'why' are required (§111).", true);
+        try {
+          await api.createEquivalent(id, target, why);
+          toast("Equivalent Product link created — pending review.");
+          loadEquivalents();
+        } catch (e) { toast(e.message, true); }
+      };
+    }
+    await loadEquivalents();
+
     detailEl.querySelector("#p-close").onclick = () => detailEl.classList.add("hidden");
     detailEl.querySelector("#p-dup").onclick = async () => {
       const res = await api.productDuplicates(id);
       const out = detailEl.querySelector("#p-dup-result");
-      out.innerHTML = res.matches.length
-        ? `<table><thead><tr><th>Kind</th><th>Product</th><th>Reasons</th><th>Confidence</th></tr></thead><tbody>
+      const linksHtml = (res.links || []).length ? `
+        <h4 style="margin-top:12px">Linked records (§111)</h4>
+        <table><thead><tr><th>Label</th><th>Other product</th><th>Status</th><th>Linked By</th><th>Why</th><th>Checked By</th><th>Approved By</th><th>Approval Date</th></tr></thead>
+        <tbody>${res.links.map((l) => `
+          <tr><td>${esc(l.label)}</td><td>${esc((l.other_product_id || "").slice(0, 8))}…</td>
+          <td>${statusBadge(l.status)}</td>
+          <td class="muted">${l.linked_by ? esc(l.linked_by.slice(0, 8)) + "…" : "—"}</td>
+          <td class="muted" style="font-size:12px">${esc(l.why)}</td>
+          <td class="muted">${l.checked_by ? esc(l.checked_by.slice(0, 8)) + "…" : "—"}</td>
+          <td class="muted">${l.approved_by ? esc(l.approved_by.slice(0, 8)) + "…" : "—"}</td>
+          <td>${l.approval_date ? fmtDate(l.approval_date) : "—"}</td></tr>`).join("")}</tbody></table>` : "";
+      out.innerHTML = (res.matches.length ? `
+        <table><thead><tr><th>Kind</th><th>Product</th><th>Reasons</th><th>Confidence</th></tr></thead><tbody>
             ${res.matches.map((m) => `<tr><td>${statusBadge(m.kind)}</td><td>${esc(m.product_label)}</td><td>${m.reasons.join(", ")}</td><td>${Math.round(m.confidence * 100)}%</td></tr>`).join("")}
-          </tbody></table><p class="muted" style="margin-top:8px">${esc(res.note)}</p>`
-        : `<p class="muted" style="margin-top:10px">No duplicates detected. ${esc(res.note)}</p>`;
+          </tbody></table>` : `<p class="muted" style="margin-top:10px">No duplicates detected.</p>`)
+        + linksHtml + `<p class="muted" style="margin-top:8px">${esc(res.note)}</p>`;
     };
     detailEl.querySelectorAll("[data-pvs]").forEach((btn) => {
       btn.onclick = async () => {

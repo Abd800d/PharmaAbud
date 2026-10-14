@@ -6,7 +6,7 @@
 
 | Suite | Location | Runs |
 |-------|----------|------|
-| Backend unit/integration (79 tests, 8 files) | `backend/tests/` | `pytest tests/ -q` |
+| Backend unit/integration (85 tests, 9 files) | `backend/tests/` | `pytest tests/ -q` |
 | Flutter model/sync tests | `mobile/test/` | `flutter test` |
 | Load generation (100k+ synthetic) | `backend/scripts/generate_synthetic.py` | manual / perf job |
 
