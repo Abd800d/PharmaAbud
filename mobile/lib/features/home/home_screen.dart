@@ -14,7 +14,7 @@ import '../../shared/widgets/states.dart';
 import '../drugs/drug_detail_screen.dart';
 import '../scan/scan_screen.dart';
 import '../search/search_screen.dart';
-import '../systems/system_detail_screen.dart';
+import '../systems/systems_screens.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
