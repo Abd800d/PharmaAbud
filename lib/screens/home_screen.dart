@@ -689,10 +689,3 @@ class _MoreTabState extends State<_MoreTab> {
     ]);
   }
 }
- Online features activate automatically when connected.',
-                  'يعمل بالكامل دون إنترنت، وتتفعّل مزايا الإنترنت تلقائياً عند الاتصال.'),
-              style: const TextStyle(fontSize: 11, color: Colors.white60, height: 1.8)),
-        ]))),
-    ]);
-  }
-}
