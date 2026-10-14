@@ -51,6 +51,11 @@ cd backend && .venv/bin/python -m pytest tests/ -q
 
 ## Mobile app
 
+**Download the APK (ready-to-install release build):**
+
+> **https://github.com/Abd800d/PharmaAbud/releases/download/apk-v1.0.0/app-release.apk**
+> — Release [apk-v1.0.0](https://github.com/Abd800d/PharmaAbud/releases/tag/apk-v1.0.0) · ~63 MB · Android (arm64) · built by CI on every `mobile/**` change.
+
 ```bash
 cd mobile
 flutter create --platforms=android . && flutter pub get
@@ -58,8 +63,10 @@ flutter test
 flutter run --dart-define=APH_API_BASE=http://10.0.2.2:8000/api/v1
 ```
 
-Or use the cloud build: push and download the APK from the GitHub Actions
-artifact (`aph-mobile-release-apk`) — no Flutter installation required.
+The cloud build (`Build Android APK` workflow) produces the APK on every
+relevant push and publishes it to the GitHub Release above — no Flutter
+installation required. The same file is also available as the
+`aph-mobile-release-apk` Actions artifact on each run.
 
 ## What is implemented
 
