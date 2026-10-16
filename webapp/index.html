@@ -98,7 +98,7 @@ footer{max-width:760px;margin:18px auto;padding:0 16px;color:var(--mut);font-siz
 
   <!-- AI -->
   <section class="view" id="v-ai"><h2 class="sec">🤖 <span data-i="aiT">المساعد الدوائي الذكي</span></h2>
-    <div class="notice" data-i="aiNote">يجيب من قاعدة APH المحلية، وعند توفر الإنترنت يمكن جلب النشرة الرسمية من openFDA / DailyMed. المعلومات تعليمية ولا تغني عن الطبيب أو الصيدلي.</div>
+    <div class="notice" data-i="aiNote">ذكاء اصطناعي حقيقي (Gemini / OpenAI) مرتبط بقاعدة APH المحلية + تصوير العلبة للتعرف على الدواء. دون مفتاح أو إنترنت يجيب من قاعدة APH المحلية. يمكن أيضاً جلب النشرة الرسمية من openFDA / DailyMed. المعلومات تعليمية ولا تغني عن الطبيب أو الصيدلي.</div>
     <div class="chatlog" id="chatLog" style="margin-top:12px"></div>
     <div class="searchbar"><input id="aiQ" placeholder="مثال: ما جرعة الميتفورمين؟ بديل البنادول؟ تداخلات الوارفارين؟"><button class="btn" onclick="askAI()" data-i="ask">اسأل</button></div>
     <div class="row" style="margin-top:8px"><button class="btn ghost sm" onclick="quickAI(this)">جرعة الباراسيتامول</button><button class="btn ghost sm" onclick="quickAI(this)">بدائل الإيبوبروفين</button><button class="btn ghost sm" onclick="quickAI(this)">تداخلات الوارفارين</button><button class="btn ghost sm" onclick="quickAI(this)">أدوية الضغط</button></div>
@@ -319,5 +319,6 @@ $('q').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch()});$('aiQ').a
 applyLang();fillSysSelect();renderHome();netUI();bubble(L('مرحباً بك في مساعد APH الدوائي 🤖 اسألني عن جرعة أي دواء أو بدائله أو تداخلاته — أو مثال: «جرعة الميتفورمين».','Welcome to APH assistant. Ask about dose, alternatives or interactions.'),false);
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
 </script>
+<script src="aph-cloud.js"></script>
 </body>
 </html>

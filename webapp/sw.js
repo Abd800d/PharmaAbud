@@ -1,6 +1,6 @@
 /* APH offline cache — يعمل التطبيق دون إنترنت بعد أول زيارة */
-const C='aph-v3';
-const CORE=['./','./index.html','./drugs-data.js','./manifest.webmanifest'];
+const C='aph-v4';
+const CORE=['./','./index.html','./drugs-data.js','./aph-cloud.js','./manifest.webmanifest','./admin/','./admin/index.html'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())});
 self.addEventListener('fetch',e=>{
