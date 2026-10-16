@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'app_settings.dart';
 import 'db/db_helper.dart';
 import 'screens/home_screen.dart';
+import 'services/sync_service.dart';
 
 /// AbdulmajeedPharma (APH) — © Dr. Abdulmajeed Abdullah Almakhedhi
 void main() {
@@ -60,6 +61,11 @@ class _AppBootstrapState extends State<AppBootstrap> {
     await AppSettings.load();
     await DBHelper.instance.seedIfEmpty(); // قاعدة APH الحقيقية — مرة واحدة
     if (mounted) setState(() => _ready = true);
+    // مزامنة تلقائية مع موقع التحكم عند توفر الإنترنت — لا تحجب الإقلاع،
+    // وإن لم يتوفر إنترنت يعمل التطبيق كاملاً من القاعدة المحلية.
+    if (AppSettings.autoSync.value) {
+      SyncService.pull().catchError((_) => const SyncResult(ok: false));
+    }
   }
 
   @override

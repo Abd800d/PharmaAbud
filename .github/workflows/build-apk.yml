@@ -5,6 +5,9 @@ on:
     branches: [main, master, 'arena/**']
   workflow_dispatch: {}
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -32,13 +35,40 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Analyze (non-blocking)
-        run: flutter analyze 2>&1 | tee analyze-log.txt || true
-
-      - name: Build release APK
+      # بوابة سريعة: أخطاء الترجمة فقط (لا يحجبها تحذير تنسيق) — تفشل مبكراً قبل Gradle
+      - name: Analyze (errors only — blocking)
         run: |
           set -o pipefail
-          flutter build apk --release 2>&1 | tee build-log.txt
+          dart analyze --fatal-infos=false --fatal-warnings=false . 2>&1 | tee analyze-log.txt
+
+      - name: Analyze (full report, non-blocking)
+        run: flutter analyze 2>&1 | tee analyze-full.txt || true
+
+      - name: Verify seed database integrity
+        run: python3 tools/verify_seed.py
+
+      # مفاتيح الذكاء الاصطناعي تُحقن وقت البناء من أسرار المستودع (لا تُكتب في الكود):
+      #   APH_GEMINI_KEY  (Google AI Studio)   APH_OPENAI_KEY  (OpenAI)
+      # وإن لم تُضف، يدخلها المستخدم من شاشة الإعدادات وتُحفظ على جهازه.
+      - name: Build release APK (universal)
+        run: |
+          set -o pipefail
+          flutter build apk --release \
+            --dart-define=APH_GEMINI_KEY="${APH_GEMINI_KEY}" \
+            --dart-define=APH_OPENAI_KEY="${APH_OPENAI_KEY}" 2>&1 | tee build-log.txt
+        env:
+          APH_GEMINI_KEY: ${{ secrets.APH_GEMINI_KEY }}
+          APH_OPENAI_KEY: ${{ secrets.APH_OPENAI_KEY }}
+
+      - name: Build release APK (split per ABI — smaller downloads)
+        run: |
+          set -o pipefail
+          flutter build apk --release --split-per-abi \
+            --dart-define=APH_GEMINI_KEY="${APH_GEMINI_KEY}" \
+            --dart-define=APH_OPENAI_KEY="${APH_OPENAI_KEY}" 2>&1 | tee -a build-log.txt
+        env:
+          APH_GEMINI_KEY: ${{ secrets.APH_GEMINI_KEY }}
+          APH_OPENAI_KEY: ${{ secrets.APH_OPENAI_KEY }}
 
       - name: Publish errors as annotations
         if: always()
@@ -53,10 +83,30 @@ jobs:
           name: aph-build-logs
           path: |
             analyze-log.txt
+            analyze-full.txt
             build-log.txt
 
-      - name: Upload APK artifact
+      - name: Collect APK files
+        run: |
+          mkdir -p apk_out
+          cp build/app/outputs/flutter-apk/app-release.apk apk_out/AbdulmajeedPharma-APH.apk
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk apk_out/AbdulmajeedPharma-APH-arm64-v8a.apk || true
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk apk_out/AbdulmajeedPharma-APH-armeabi-v7a.apk || true
+          ls -la apk_out
+
+      - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
           name: AbdulmajeedPharma-APH-release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: apk_out/*.apk
+
+      # رابط تحميل دائم (لا ينتهي مثل artifacts الخاصة بـ CI)
+      - name: Publish APK to GitHub Release (apk-latest)
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
+          VER=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+          NOTES="AbdulmajeedPharma (APH) build ${VER} from ${GITHUB_REF_NAME} @ ${GITHUB_SHA::7}. Owner: Dr. Abdulmajeed Abdullah Almakhedhi. Support: WhatsApp 967781733795 - 7a8b1d@gmail.com. Install: allow unknown sources, then open AbdulmajeedPharma-APH-arm64-v8a.apk (modern phones) or the universal APK."
+          gh release delete apk-latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create apk-latest apk_out/*.apk --title "APH Mobile APK (latest)" --notes "$NOTES" --target "$GITHUB_SHA"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

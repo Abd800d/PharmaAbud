@@ -32,3 +32,12 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# مفاتيح API المحلية — لا تُرفع للمستودع أبداً
+.env
+.env.*
+secrets.local.json
+*.local.json
+aph-apk/
+apk_out/
+__pycache__/

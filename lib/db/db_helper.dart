@@ -18,7 +18,7 @@ class DBHelper {
 
   Future<Database> _open() async {
     final path = p.join(await getDatabasesPath(), 'abdulmajeedpharma.db');
-    return openDatabase(path, version: 3, onCreate: (d, v) async {
+    return openDatabase(path, version: 4, onCreate: (d, v) async {
       await d.execute('''CREATE TABLE generics(
         id INTEGER PRIMARY KEY AUTOINCREMENT, name_en TEXT NOT NULL,
         name_ar TEXT, system_id TEXT, subgroup_en TEXT, subgroup_ar TEXT,
@@ -33,16 +33,19 @@ class DBHelper {
         image_path TEXT, source TEXT, verified INTEGER DEFAULT 0)''');
       await d.execute('''CREATE TABLE messages(
         id INTEGER PRIMARY KEY AUTOINCREMENT, author TEXT, body TEXT,
-        is_admin INTEGER DEFAULT 0, created_at INTEGER)''');
+        is_admin INTEGER DEFAULT 0, created_at INTEGER, source_id TEXT)''');
       await d.execute('CREATE TABLE favorites(generic_id INTEGER PRIMARY KEY)');
     }, onUpgrade: (d, oldV, newV) async {
       if (oldV < 3) {
         await d.execute('DROP TABLE IF EXISTS messages');
         await d.execute('''CREATE TABLE messages(
           id INTEGER PRIMARY KEY AUTOINCREMENT, author TEXT, body TEXT,
-          is_admin INTEGER DEFAULT 0, created_at INTEGER)''');
+          is_admin INTEGER DEFAULT 0, created_at INTEGER, source_id TEXT)''');
         await d.execute(
             'CREATE TABLE IF NOT EXISTS favorites(generic_id INTEGER PRIMARY KEY)');
+      } else if (oldV < 4) {
+        // إضافة معرّف الرسائل القادمة من لوحة التحكم (لمزامنة إعلانات الإدارة)
+        await d.execute('ALTER TABLE messages ADD COLUMN source_id TEXT');
       }
     });
   }
@@ -159,6 +162,44 @@ class DBHelper {
 
   Future<void> addMessage(ChatMessage m) async =>
       (await db).insert('messages', m.toMap()..remove('id'));
+
+  // ---------- أدوات المزامنة مع لوحة التحكم على الويب ----------
+  /// يبحث عن اسم علمي بالاسم الإنجليزي (غير حساس لحالة الأحرف)
+  Future<GenericDrug?> genericByName(String nameEn) async {
+    final rows = await (await db).query('generics',
+        where: 'LOWER(name_en)=?', whereArgs: [nameEn.trim().toLowerCase()],
+        limit: 1);
+    if (rows.isEmpty) return null;
+    return GenericDrug.fromMap(rows.first);
+  }
+
+  Future<List<TradeProduct>> productsByGeneric(int genericId) =>
+      productsOf(genericId);
+
+  /// هل هذا المنتج موجوداً بنفس (الاسم التجاري + القوة + الشكل + الشركة)؟
+  Future<bool> productExists(int genericId, String brand, String strength,
+      String form, String manufacturer) async {
+    final n = Sqflite.firstIntValue(await (await db).query('products',
+        columns: ['COUNT(*) AS c'],
+        where:
+            'generic_id=? AND LOWER(brand_name)=? AND LOWER(strength)=? AND LOWER(dosage_form)=? AND LOWER(manufacturer)=?',
+        whereArgs: [
+          genericId,
+          brand.trim().toLowerCase(),
+          strength.trim().toLowerCase(),
+          form.trim().toLowerCase(),
+          manufacturer.trim().toLowerCase(),
+        ]));
+    return (n ?? 0) > 0;
+  }
+
+  Future<bool> messageExists(String sourceId) async {
+    final n = Sqflite.firstIntValue(await (await db).query('messages',
+        columns: ['COUNT(*) AS c'],
+        where: 'source_id=?',
+        whereArgs: [sourceId]));
+    return (n ?? 0) > 0;
+  }
 
   Future<void> resetAll() async {
     final d = await db;

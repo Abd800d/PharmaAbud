@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../app_settings.dart';
 import '../db/db_helper.dart';
 import '../models/drug_models.dart';
+import '../services/ai_client.dart';
 import '../services/image_store.dart';
 import '../services/online_service.dart';
 import '../widgets/drug_image.dart';
@@ -79,6 +80,60 @@ class _DrugDetailScreenState extends State<DrugDetailScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(S.t('Missing data saved permanently from FDA label', 'حُفظت البيانات الناقصة دائماً من نشرة FDA'))));
+    }
+  }
+
+  /// جلب البيانات الناقصة من الإنترنت بواسطة الذكاء الاصطناعي (Gemini / OpenAI)
+  /// وحفظها دائماً في قاعدة الجهاز — لا يستبدل أي حقل حرّره المستخدم.
+  Future<void> _enrichWithAi() async {
+    if (!AiClient.hasCloudKey) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(S.t(
+              'Add a Gemini or OpenAI key first: Settings → AI Drug Assistant.',
+              'أضف مفتاح Gemini أو OpenAI أولاً: الإعدادات ← المساعد الدوائي الذكي.'))));
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(S.t('AI is completing the missing fields…',
+            'الذكاء الاصطناعي يكمل الحقول الناقصة…'))));
+    final data = await AiClient.enrichDrug(_drug);
+    if (!mounted) return;
+    if (data.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(S.t('No internet or the AI key is invalid. Local data is unchanged.',
+              'لا يوجد إنترنت أو أن مفتاح الذكاء الاصطناعي غير صالح — لم تتغير بياناتك.'))));
+      return;
+    }
+    String pick(String key, String local) {
+      final v = (data[key] ?? '').trim();
+      return local.trim().isNotEmpty ? local : v;
+    }
+
+    final updated = GenericDrug(
+      id: _drug.id,
+      nameEn: _drug.nameEn,
+      nameAr: _drug.nameAr,
+      systemId: _drug.systemId,
+      subgroupEn: _drug.subgroupEn,
+      subgroupAr: _drug.subgroupAr,
+      atc: _drug.atc,
+      introduction: pick('introduction', _drug.introduction),
+      mechanism: pick('mechanism', _drug.mechanism),
+      indications: pick('indications', _drug.indications),
+      dosage: pick('dosage', _drug.dosage),
+      interactions: pick('interactions', _drug.interactions),
+      warnings: pick('warnings', _drug.warnings),
+      pregnancy: pick('pregnancy', _drug.pregnancy),
+      imagePath: _drug.imagePath,
+      source: '${_drug.source} + AI enrichment (review before publishing)',
+    );
+    await DBHelper.instance.updateGeneric(updated);
+    setState(() => _drug = updated);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(S.t(
+              'Saved permanently ✓ review the fields and mark them verified.',
+              'حُفظت دائماً ✓ راجع الحقول ثم اعتمدها.'))));
     }
   }
 
@@ -177,6 +232,9 @@ class _DrugDetailScreenState extends State<DrugDetailScreen> {
                     FilledButton.icon(icon: const Icon(Icons.cloud_download, size: 16),
                         label: Text(S.t('Fetch missing (openFDA)', 'جلب الناقص (openFDA)')),
                         onPressed: _fetchOnline),
+                    FilledButton.tonalIcon(icon: const Icon(Icons.auto_awesome, size: 16),
+                        label: Text(S.t('Complete missing with AI', 'أكمل الناقص بالذكاء الاصطناعي')),
+                        onPressed: _enrichWithAi),
                     if (admin) OutlinedButton.icon(icon: const Icon(Icons.edit, size: 16),
                         label: Text(S.t('Edit', 'تعديل')),
                         onPressed: () async {
