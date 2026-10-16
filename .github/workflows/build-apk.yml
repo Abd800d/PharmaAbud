@@ -38,8 +38,14 @@ jobs:
       # بوابة سريعة: أخطاء الترجمة فقط (لا يحجبها تحذير تنسيق) — تفشل مبكراً قبل Gradle
       - name: Analyze (errors only — blocking)
         run: |
-          set -o pipefail
-          dart analyze --no-fatal-infos --no-fatal-warnings . 2>&1 | tee analyze-log.txt
+          dart analyze --no-fatal-warnings . 2>&1 | tee analyze-log.txt || true
+          if grep -qE "^[[:space:]]*error" analyze-log.txt; then
+            echo "Dart analysis ERRORS:"
+            grep -E "^[[:space:]]*error" analyze-log.txt | head -40 | cut -c1-240
+            exit 1
+          fi
+          echo "No blocking analysis errors."
+          tail -15 analyze-log.txt
 
       - name: Analyze (full report, non-blocking)
         run: flutter analyze 2>&1 | tee analyze-full.txt || true
