@@ -7,13 +7,15 @@ import 'package:path_provider/path_provider.dart';
 import '../app_settings.dart';
 import '../db/db_helper.dart';
 import '../models/drug_models.dart';
-import '../services/ai_service.dart';
+import '../services/ai_client.dart';
 import '../services/import_service.dart';
 import '../services/online_service.dart';
 import '../services/search_service.dart';
+import '../services/sync_service.dart';
 import '../widgets/drug_image.dart';
 import 'add_drug_screen.dart';
 import 'drug_detail_screen.dart';
+import 'settings_screen.dart';
 
 const _sysIcons = <String, IconData>{
   'nervous': Icons.psychology, 'cardiovascular': Icons.favorite,
@@ -81,6 +83,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             onPressed: () => AppSettings.setArabic(!S.ar),
           ),
+          IconButton(
+            tooltip: S.t('Settings — AI & sync', 'الإعدادات — الذكاء الاصطناعي والمزامنة'),
+            icon: const Icon(Icons.tune),
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen())),
+          ),
         ],
       ),
       body: pages[_tab],
@@ -107,19 +115,96 @@ class _HomeScreenState extends State<HomeScreen> {
 class _DrugTile extends StatelessWidget {
   final GenericDrug drug;
   final String matchedBrand;
-  const _DrugTile({required this.drug, this.matchedBrand = ''});
+
+  /// المنتجات التجارية لهذا الدواء — تُعرض مقسّمة حسب الشركة المصنعة
+  /// وتحتها الوكيل والدولة (كما طلب د. عبدالمجيد في قائمة البحث)
+  final List<TradeProduct> products;
+  const _DrugTile(
+      {required this.drug, this.matchedBrand = '', this.products = const []});
+
   @override
   Widget build(BuildContext context) {
     final sys = systemById(drug.systemId);
-    return Card(child: ListTile(
-      leading: DrugImage(path: drug.imagePath),
-      title: Text(drug.nameEn, style: const TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text('${drug.nameAr} • ${S.ar ? sys.ar : sys.en} • ${S.ar ? drug.subgroupAr : drug.subgroupEn}'
-          '${matchedBrand.isNotEmpty ? '\n↳ ${S.t('matched product', 'طابق منتجاً')}: $matchedBrand' : ''}'),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => DrugDetailScreen(drug: drug))),
-    ));
+    final title = Text(drug.nameEn,
+        style: const TextStyle(fontWeight: FontWeight.bold));
+    final subtitle = Text(
+        '${drug.nameAr} • ${S.ar ? sys.ar : sys.en} • ${S.ar ? drug.subgroupAr : drug.subgroupEn}'
+        '${matchedBrand.isNotEmpty ? '\n↳ ${S.t('matched product', 'طابق منتجاً')}: $matchedBrand' : ''}');
+    if (products.isEmpty) {
+      return Card(child: ListTile(
+        leading: DrugImage(path: drug.imagePath),
+        title: title,
+        subtitle: subtitle,
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => DrugDetailScreen(drug: drug))),
+      ));
+    }
+    final groups = <String, List<TradeProduct>>{};
+    for (final pr in products) {
+      final key = pr.manufacturer.isEmpty
+          ? S.t('Unknown manufacturer', 'شركة غير محددة')
+          : pr.manufacturer;
+      groups.putIfAbsent(key, () => <TradeProduct>[]).add(pr);
+    }
+    return Card(
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          leading: DrugImage(path: drug.imagePath),
+          title: title,
+          subtitle: subtitle,
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+          onExpansionChanged: (_) {},
+          children: [
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                  '${S.t('Trade products', 'المنتجات التجارية')} (${products.length})',
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF14C8B4))),
+            ),
+            const SizedBox(height: 4),
+            for (final g in groups.entries) ...[
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 6, bottom: 2),
+                  child: Text('🏭 ${g.key}',
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              for (final pr in g.value)
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Text(
+                        '• ${pr.brandName} ${pr.strength} — ${pr.dosageForm}\n'
+                        '   ${S.t('Country', 'الدولة')}: ${pr.country.isEmpty ? '—' : pr.country}   |   '
+                        '${S.t('Yemen agent', 'وكيل اليمن')}: ${pr.agentYemen.isEmpty ? S.t('needs verification', 'يحتاج توثيق') : pr.agentYemen} '
+                        '${pr.verified ? '✅' : '⚠️'}',
+                        style: const TextStyle(fontSize: 11.5, height: 1.6)),
+                  ),
+                ),
+            ],
+            const SizedBox(height: 4),
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton.icon(
+                icon: const Icon(Icons.open_in_new, size: 15),
+                label: Text(S.t('Open full drug file', 'فتح الملف الكامل للدواء')),
+                onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => DrugDetailScreen(drug: drug))),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -139,7 +224,18 @@ class _HomeTabState extends State<_HomeTab> {
   bool _searched = false;
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() {
+    super.initState();
+    _load();
+    AppSettings.dbRevision.addListener(_load);
+  }
+
+  @override
+  void dispose() {
+    AppSettings.dbRevision.removeListener(_load);
+    _q.dispose();
+    super.dispose();
+  }
 
   Future<void> _load() async {
     final a = await DBHelper.instance.allGenerics();
@@ -217,7 +313,12 @@ class _HomeTabState extends State<_HomeTab> {
               ]),
             ])))
           else
-            ..._hits.map((h) => _DrugTile(drug: h.drug, matchedBrand: h.matchedBrand)),
+            ..._hits.map((h) => _DrugTile(
+                drug: h.drug,
+                matchedBrand: h.matchedBrand,
+                products: _products
+                    .where((p) => p.genericId == h.drug.id)
+                    .toList())),
         ],
         const SizedBox(height: 14),
         FutureBuilder<Set<int>>(
@@ -357,6 +458,14 @@ class _SystemDrugsScreenState extends State<_SystemDrugsScreen> {
 }
 
 // ---------------- AI Tab ----------------
+class _ChatMsg {
+  final bool me;
+  final String text;
+  final String tag;
+  final GenericDrug? openDrug;
+  const _ChatMsg({required this.me, required this.text, this.tag = '', this.openDrug});
+}
+
 class _AiTab extends StatefulWidget {
   const _AiTab();
   @override
@@ -365,42 +474,184 @@ class _AiTab extends StatefulWidget {
 
 class _AiTabState extends State<_AiTab> {
   final _q = TextEditingController();
-  final List<({bool me, String text})> _log = [];
+  final List<_ChatMsg> _log = [];
+  bool _busy = false;
 
   @override
   void initState() {
     super.initState();
-    _log.add((me: false, text: S.t(
-        'Welcome to the APH drug assistant 🤖 Ask me about a dose, interactions, pregnancy, or alternatives — e.g. "Metformin dose".',
-        'مرحباً بك في مساعد APH الدوائي 🤖 اسألني عن جرعة أي دواء أو تداخلاته أو الحمل أو بدائله — مثال: «جرعة الميتفورمين».')));
+    _log.add(_ChatMsg(me: false, text: S.t(
+        'Welcome to the APH drug assistant 🤖\n'
+        'Ask about a dose, interactions, pregnancy, alternatives or Yemeni trade products — '
+        'e.g. "Metformin dose" or "بدائل الأوجمنتين".\n'
+        'You can also photograph a medicine pack and I will read it for you 📷.',
+        'مرحباً بك في مساعد APH الدوائي 🤖\n'
+        'اسألني عن جرعة دواء أو تداخلاته أو الحمل أو البدائل أو المنتجات التجارية في اليمن — '
+        'مثال: «جرعة الميتفورمين» أو «بدائل الأوجمنتين».\n'
+        'ويمكنك تصوير علبة الدواء وسأقرأها لك 📷.')));
+  }
+
+  String _providerLabel(AiReply r) {
+    if (!r.online) return S.t('📴 Local APH database', '📴 قاعدة APH المحلية');
+    return r.provider == 'gemini' ? '☁ Gemini (Google AI)' : '☁ OpenAI GPT';
   }
 
   Future<void> _ask([String? preset]) async {
     final q = (preset ?? _q.text).trim();
-    if (q.isEmpty) return;
-    setState(() { _log.add((me: true, text: q)); _q.clear(); });
-    final a = await AiService.answer(q);
-    if (mounted) setState(() => _log.add((me: false, text: a)));
+    if (q.isEmpty || _busy) return;
+    _q.clear();
+    setState(() {
+      _log.add(_ChatMsg(me: true, text: q));
+      _busy = true;
+    });
+    final r = await AiClient.ask(q);
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _log.add(_ChatMsg(
+          me: false,
+          text: r.error.isNotEmpty && !r.online
+              ? '${r.text}\n\n⚠️ ${r.error}'
+              : r.text,
+          tag: _providerLabel(r)));
+    });
+  }
+
+  /// البحث بالصورة: نموذج رؤية حقيقي يقرأ العلبة ثم يبحث عنها في قاعدة APH
+  Future<void> _askImage(ImageSource src) async {
+    if (_busy) return;
+    final picked = await ImagePicker()
+        .pickImage(source: src, maxWidth: 1200, imageQuality: 82);
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    final lower = picked.path.toLowerCase();
+    final mime = lower.endsWith('.png')
+        ? 'image/png'
+        : (lower.endsWith('.webp') ? 'image/webp' : 'image/jpeg');
+    setState(() {
+      _log.add(_ChatMsg(
+          me: true, text: S.t('📷 Photo of a medicine pack', '📷 صورة علبة دواء')));
+      _busy = true;
+    });
+    final r = await AiClient.identifyImage(bytes, mime: mime);
+    GenericDrug? found;
+    var extra = '';
+    if (r.online) {
+      final text = r.text.toLowerCase();
+      try {
+        final generics = await DBHelper.instance.allGenerics();
+        for (final g in generics) {
+          if (g.nameEn.length > 3 && text.contains(g.nameEn.toLowerCase())) {
+            found = g;
+            break;
+          }
+        }
+        if (found != null) {
+          extra = S.t(
+              '\n\n✅ Found in the APH database: ${found.nameEn} — open the file below for '
+              'trade products, manufacturers and Yemen agents.',
+              '\n\n✅ موجود في قاعدة APH: ${found.nameEn} — افتح الملف أدناه لعرض المنتجات '
+              'التجارية والشركات المصنعة ووكلاء اليمن.');
+        }
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _log.add(_ChatMsg(
+          me: false,
+          text: r.text + extra,
+          tag: _providerLabel(r),
+          openDrug: found));
+    });
+  }
+
+  Future<void> _pickImageSheet() async {
+    final src = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(leading: const Icon(Icons.camera_alt),
+              title: Text(S.t('Take a photo of the medicine', 'التقاط صورة للدواء')),
+              onTap: () => Navigator.pop(context, ImageSource.camera)),
+          ListTile(leading: const Icon(Icons.photo_library),
+              title: Text(S.t('Choose from gallery', 'اختيار من المعرض')),
+              onTap: () => Navigator.pop(context, ImageSource.gallery)),
+          ListTile(leading: const Icon(Icons.travel_explore),
+              title: Text(S.t('Search the pack on Google Lens', 'بحث عن العلبة في Google Lens')),
+              onTap: () {
+                Navigator.pop(context);
+                OnlineService.openUrl(OnlineService.googleLens);
+              }),
+        ]),
+      ),
+    );
+    if (src != null) await _askImage(src);
   }
 
   @override
   Widget build(BuildContext context) {
+    final provider = AppSettings.activeProvider;
     return Column(children: [
-      Container(
-        margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(color: const Color(0xFF2A2208),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFF6B5316))),
-        child: Text(S.t(
-            'Answers come from the local APH database; verify officially via openFDA / DailyMed. Educational only.',
-            'يجيب من قاعدة APH المحلية — تحقق رسمياً عبر openFDA / DailyMed. معلومات تعليمية فقط.'),
-            style: const TextStyle(fontSize: 11, color: Color(0xFFFDE68A))),
+      InkWell(
+        onTap: () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const SettingsScreen())),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+              color: provider == 'offline'
+                  ? const Color(0xFF2A2208)
+                  : const Color(0xFF08303A),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                  color: provider == 'offline'
+                      ? const Color(0xFF6B5316)
+                      : const Color(0xFF14C8B4))),
+          child: Row(children: [
+            Icon(provider == 'offline' ? Icons.wifi_off : Icons.cloud_done,
+                size: 18,
+                color: provider == 'offline'
+                    ? const Color(0xFFFDE68A)
+                    : const Color(0xFF14C8B4)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                  provider == 'offline'
+                      ? S.t(
+                          'Offline mode — answers come from the local APH database. '
+                          'Add a Gemini / OpenAI key for real cloud AI. Tap to open settings.',
+                          'وضع عدم الاتصال — الإجابات من قاعدة APH المحلية. '
+                          'أضف مفتاح Gemini أو OpenAI للحصول على ذكاء اصطناعي سحابي حقيقي. اضغط للفتح.')
+                      : S.t(
+                          'Cloud AI active ($provider) — grounded on the APH database. '
+                          'Verify officially via openFDA / DailyMed. Tap for settings.',
+                          'الذكاء السحابي مفعّل ($provider) — مرتبط بقاعدة APH. '
+                          'تحقق رسمياً عبر openFDA / DailyMed. اضغط للإعدادات.'),
+                  style: TextStyle(
+                      fontSize: 11,
+                      height: 1.5,
+                      color: provider == 'offline'
+                          ? const Color(0xFFFDE68A)
+                          : const Color(0xFFC9F5EF))),
+            ),
+          ]),
+        ),
       ),
       Expanded(child: ListView.builder(
         padding: const EdgeInsets.all(12),
-        itemCount: _log.length,
+        itemCount: _log.length + (_busy ? 1 : 0),
         itemBuilder: (_, i) {
+          if (_busy && i == _log.length) {
+            return const Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Padding(
+                padding: EdgeInsets.all(10),
+                child: SizedBox(width: 20, height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
+            );
+          }
           final m = _log[i];
           return Align(
             alignment: m.me ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
@@ -411,7 +662,27 @@ class _AiTabState extends State<_AiTab> {
               decoration: BoxDecoration(
                   color: m.me ? const Color(0xFF0F766E) : const Color(0xFF123A4F),
                   borderRadius: BorderRadius.circular(15)),
-              child: SelectableText(m.text, style: const TextStyle(height: 1.8, fontSize: 13)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if (m.tag.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(m.tag,
+                        style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF14C8B4))),
+                  ),
+                SelectableText(m.text, style: const TextStyle(height: 1.8, fontSize: 13)),
+                if (m.openDrug != null)
+                  TextButton.icon(
+                    icon: const Icon(Icons.medication, size: 16),
+                    label: Text(S.t('Open ${m.openDrug!.nameEn} in APH',
+                        'فتح ${m.openDrug!.nameEn} في APH')),
+                    onPressed: () => Navigator.push(context,
+                        MaterialPageRoute(
+                            builder: (_) => DrugDetailScreen(drug: m.openDrug!))),
+                  ),
+              ]),
             ),
           );
         },
@@ -420,16 +691,22 @@ class _AiTabState extends State<_AiTab> {
         for (final s in [S.t('Paracetamol dose', 'جرعة الباراسيتامول'),
           S.t('Ibuprofen alternatives', 'بدائل الإيبوبروفين'),
           S.t('Warfarin interactions', 'تداخلات الوارفارين'),
-          S.t('Hypertension drugs', 'أدوية الضغط')])
+          S.t('Hypertension drugs', 'أدوية الضغط'),
+          S.t('Amoxicillin products in Yemen', 'منتجات الأموكسيسيلين في اليمن')])
           Padding(padding: const EdgeInsetsDirectional.only(start: 8),
-              child: ActionChip(label: Text(s), onPressed: () => _ask(s))),
+              child: ActionChip(label: Text(s), onPressed: _busy ? null : () => _ask(s))),
       ])),
       Padding(padding: const EdgeInsets.all(10), child: Row(children: [
+        IconButton.filledTonal(
+          tooltip: S.t('Identify a medicine from its photo', 'التعرف على الدواء من صورته'),
+          icon: const Icon(Icons.photo_camera), onPressed: _busy ? null : _pickImageSheet),
+        const SizedBox(width: 8),
         Expanded(child: TextField(controller: _q, onSubmitted: (_) => _ask(),
             decoration: InputDecoration(hintText: S.t('Ask about any drug…', 'اسأل عن أي دواء…'),
                 border: const OutlineInputBorder()))),
         const SizedBox(width: 8),
-        FilledButton(onPressed: () => _ask(), child: Text(S.t('Ask', 'اسأل'))),
+        FilledButton(onPressed: _busy ? null : () => _ask(),
+            child: Text(S.t('Ask', 'اسأل'))),
       ])),
     ]);
   }
@@ -569,6 +846,18 @@ class _MoreTabState extends State<_MoreTab> {
     setState(() {});
   }
 
+  Future<void> _syncNow() async {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(S.t('Downloading the published APH database…',
+            'ينزّل قاعدة APH المنشورة من موقع التحكم…'))));
+    final r = await SyncService.pull();
+    await _loadStats();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        duration: const Duration(seconds: 6),
+        content: Text(r.ok ? '✅ ${r.message}' : '⚠️ ${r.message}')));
+  }
+
   Future<void> _shareExport() async {
     final json = await ImportService.exportJson();
     final dir = await getApplicationDocumentsDirectory();
@@ -629,6 +918,21 @@ class _MoreTabState extends State<_MoreTab> {
             }),
       ])),
       Card(child: Column(children: [
+        ListTile(leading: const Icon(Icons.smart_toy, color: Color(0xFF14C8B4)),
+            title: Text(S.t('AI assistant settings (Gemini / OpenAI)',
+                'إعدادات المساعد الذكي (Gemini / OpenAI)')),
+            subtitle: Text(S.t('Provider now: ${AppSettings.activeProvider} — tap to add or change keys',
+                'المزوّد الحالي: ${AppSettings.activeProvider} — اضغط لإضافة أو تغيير المفاتيح')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()))),
+        ListTile(leading: const Icon(Icons.cloud_sync, color: Color(0xFF14C8B4)),
+            title: Text(S.t('Sync database from the control site',
+                'مزامنة القاعدة من موقع التحكم')),
+            subtitle: Text(S.t('Get every drug, product, Yemen agent and announcement published by Dr. Abdulmajeed',
+                'استلم كل دواء ومنتج ووكيل في اليمن وكل إعلان ينشره د. عبدالمجيد')),
+            trailing: const Icon(Icons.download),
+            onTap: _syncNow),
         ListTile(leading: const Icon(Icons.upload_file),
             title: Text(S.t('Import database (CSV / Excel / JSON)', 'استيراد قاعدة بيانات CSV / Excel / JSON')),
             subtitle: Text(S.t('Large files supported — saved permanently on device', 'يدعم ملفات كبيرة — يُحفظ دائماً على الجهاز')),

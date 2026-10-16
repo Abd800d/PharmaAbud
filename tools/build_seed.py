@@ -10,6 +10,7 @@ AbdulmajeedPharma (APH) — Seed database builder
 تشغيل:  python3 tools/build_seed.py
 """
 import json, pathlib
+from datetime import datetime, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -730,7 +731,49 @@ d("misc","Electrolytes","كهارل","Potassium Chloride","كلوريد البو
   "فرط بوتاسيوم خطير مع مثبطات ACE وسبيرونولاكتون وقصور كلوي.","لا يعطى دون تحليل بوتاسيوم وكلى؛ الحقن الوريدي مستشفى فقط بتركيز مضبوط.","بتحليل ووصفة",
   [("Slow-K","600 mg","Tablet","Novartis","United Kingdom","يحتاج توثيق"),("Potassium Chloride","","Ampoule/Syrup","Multiple","Egypt","مستشفى/وصفة")])
 
+def _load_extension():
+    """يضيف حزم التوسعة (tools/seed_ext*.py) إلى القاعدة إن وُجدت."""
+    import importlib, glob, os
+    total = 0
+    here = os.path.dirname(os.path.abspath(__file__))
+    for mod_path in sorted(glob.glob(os.path.join(here, "seed_ext*.py"))):
+        name = os.path.basename(mod_path)[:-3]
+        try:
+            mod = importlib.import_module(name)
+        except Exception as exc:  # لا يفشل البناء بسبب حزمة توسعة
+            print(f"WARN: cannot import {name}: {exc}")
+            continue
+        ext = getattr(mod, "D_EXT", [])
+        D.extend(ext)
+        total += len(ext)
+        print(f"loaded {name}: +{len(ext)} generics")
+    return total
+
+
 def main():
+    _load_extension()
+
+    # منع تكرار نفس المادة الفعالة (تُدمج منتجاتها مع أول ظهور لها)
+    seen = {}
+    merged = []
+    dupes = 0
+    for row in D:
+        key = row[3].strip().lower()
+        if key in seen:
+            base = seen[key]
+            base_prods = list(base[13]) + [x for x in row[13]
+                                            if tuple(x) not in {tuple(y) for y in base[13]}]
+            seen[key] = base[:13] + (base_prods,)
+            idx = merged.index(base)
+            merged[idx] = seen[key]
+            dupes += 1
+        else:
+            seen[key] = row
+            merged.append(row)
+    if dupes:
+        print(f"merged {dupes} duplicate generic entries")
+    D[:] = merged
+
     drugs, pid = [], 1
     sysmap = {s[0]: s for s in SYSTEMS}
     for (sid, sgen, sgar, en, ar, atc, intro, mech, indic, dose, inter, warn, preg, prods) in D:
@@ -751,14 +794,19 @@ def main():
             "image": "", "source": "APH starter DB (BNF/FDA-label based summaries)",
             "products": plist,
         })
-    out = {"app": "AbdulmajeedPharma (APH)", "version": 3,
+    out = {"app": "AbdulmajeedPharma (APH)", "version": 4,
            "copyright": "© Dr. Abdulmajeed Abdullah Almakhedhi",
+           "updatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
            "systems": [{"id": s[0], "en": s[1], "ar": s[2], "icon": s[3]} for s in SYSTEMS],
+           "announcements": [],
            "drugs": drugs}
-    (ROOT / "assets/data/drugs_seed.json").write_text(
-        json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
+    payload = json.dumps(out, ensure_ascii=False, indent=1)
+    (ROOT / "assets/data/drugs_seed.json").write_text(payload, encoding="utf-8")
     (ROOT / "webapp/drugs-data.js").write_text(
         "window.APH_SEED=" + json.dumps(out, ensure_ascii=False) + ";", encoding="utf-8")
+    # القاعدة المنشورة التي يسحبها التطبيق من موقع التحكم (مزامنة لكل المستخدمين)
+    (ROOT / "webapp/aph-database.json").write_text(
+        json.dumps(out, ensure_ascii=False), encoding="utf-8")
     prods_total = sum(len(x["products"]) for x in drugs)
     print(f"OK: {len(drugs)} generics, {prods_total} trade products, {len(SYSTEMS)} systems")
 

@@ -144,12 +144,17 @@ class ChatMessage {
   final String author, body;
   final bool isAdmin;
   final int createdAt;
+
+  /// معرّف الرسالة القادمة من لوحة التحكم على الويب (لمنع التكرار عند المزامنة)
+  final String sourceId;
   const ChatMessage({this.id, required this.author, required this.body,
-      this.isAdmin = false, required this.createdAt});
+      this.isAdmin = false, required this.createdAt, this.sourceId = ''});
   Map<String, dynamic> toMap() => {'id': id, 'author': author, 'body': body,
-      'is_admin': isAdmin ? 1 : 0, 'created_at': createdAt};
+      'is_admin': isAdmin ? 1 : 0, 'created_at': createdAt,
+      'source_id': sourceId};
   factory ChatMessage.fromMap(Map<String, dynamic> m) => ChatMessage(
         id: m['id'] as int?, author: (m['author'] ?? '') as String,
         body: (m['body'] ?? '') as String, isAdmin: (m['is_admin'] ?? 0) == 1,
-        createdAt: (m['created_at'] ?? 0) as int);
+        createdAt: (m['created_at'] ?? 0) as int,
+        sourceId: (m['source_id'] ?? '') as String);
 }
