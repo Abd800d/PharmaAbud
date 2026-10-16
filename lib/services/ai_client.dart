@@ -64,7 +64,7 @@ Rules:
    stress laboratory monitoring and that the decision belongs to the treating physician.
 6) Always end with an official verification source (DailyMed / openFDA / WHO / BNF / local label)
    and the line: "Educational information — not a substitute for medical advice."
-7) Do not diagnose a specific patient; provide reference drug information only.'';
+7) Do not diagnose a specific patient; provide reference drug information only.''';
 
   /// يبني سياقاً من قاعدة APH المحلية (أفضل 3 نتائج مطابقة + منتجاتها)
   static Future<String> buildContext(String question) async {

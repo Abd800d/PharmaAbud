@@ -1,5 +1,4 @@
 import '../db/db_helper.dart';
-import '../models/drug_models.dart';
 import 'search_service.dart';
 
 /// مساعد دوائي ذكي: يجيب من قاعدة APH المحلية (بحث ضبابي + فهم قصد السؤال)

@@ -14,6 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Dart source sanity check (brackets & strings)
+        run: python3 tools/check_dart.py
+
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
