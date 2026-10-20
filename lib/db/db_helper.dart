@@ -18,7 +18,7 @@ class DBHelper {
 
   Future<Database> _open() async {
     final path = p.join(await getDatabasesPath(), 'abdulmajeedpharma.db');
-    return openDatabase(path, version: 6,
+    return openDatabase(path, version: 7,
         onConfigure: (d) async => d.execute('PRAGMA foreign_keys = ON'),
         onCreate: (d, v) async {
       await d.execute('''CREATE TABLE generics(
@@ -26,13 +26,16 @@ class DBHelper {
         name_ar TEXT, system_id TEXT, subgroup_en TEXT, subgroup_ar TEXT,
         atc_code TEXT, introduction TEXT, mechanism TEXT, indications TEXT,
         dosage TEXT, interactions TEXT, warnings TEXT, pregnancy TEXT,
-        image_path TEXT, source TEXT)''');
+        image_path TEXT, source TEXT, is_archived INTEGER NOT NULL DEFAULT 0)''');
       await d.execute('''CREATE TABLE products(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         generic_id INTEGER NOT NULL REFERENCES generics(id) ON DELETE CASCADE,
         brand_name TEXT NOT NULL, manufacturer TEXT, country TEXT,
         strength TEXT, dosage_form TEXT, agent_yemen TEXT,
-        image_path TEXT, source TEXT, verified INTEGER DEFAULT 0)''');
+        image_path TEXT, source TEXT, verified INTEGER DEFAULT 0,
+        is_archived INTEGER NOT NULL DEFAULT 0)''');
+      await d.execute('CREATE INDEX idx_generics_archive_name ON generics(is_archived, name_en)');
+      await d.execute('CREATE INDEX idx_products_archive_generic ON products(is_archived, generic_id)');
       await d.execute('''CREATE TABLE messages(
         id INTEGER PRIMARY KEY AUTOINCREMENT, author TEXT, body TEXT,
         is_admin INTEGER DEFAULT 0, created_at INTEGER, source_id TEXT)''');
@@ -71,6 +74,12 @@ class DBHelper {
           key TEXT PRIMARY KEY, value TEXT NOT NULL)''');
       }
       if (oldV < 6) await _createPharmacyTables(d);
+      if (oldV < 7) {
+        await d.execute('ALTER TABLE generics ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0');
+        await d.execute('ALTER TABLE products ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0');
+      }
+      await d.execute('CREATE INDEX IF NOT EXISTS idx_generics_archive_name ON generics(is_archived, name_en)');
+      await d.execute('CREATE INDEX IF NOT EXISTS idx_products_archive_generic ON products(is_archived, generic_id)');
     });
   }
 
@@ -310,13 +319,14 @@ class DBHelper {
 
   // ---------- Generics ----------
   Future<List<GenericDrug>> allGenerics() async {
-    final rows = await (await db).query('generics', orderBy: 'name_en');
+    final rows = await (await db).query('generics',
+        where: 'is_archived=0', orderBy: 'name_en');
     return rows.map(GenericDrug.fromMap).toList();
   }
 
   Future<List<GenericDrug>> bySystem(String systemId) async {
     final rows = await (await db)
-        .query('generics', where: 'system_id=?', whereArgs: [systemId],
+        .query('generics', where: 'system_id=? AND is_archived=0', whereArgs: [systemId],
             orderBy: 'subgroup_en, name_en');
     return rows.map(GenericDrug.fromMap).toList();
   }
@@ -350,14 +360,21 @@ class DBHelper {
   }
 
   // ---------- Products ----------
-  Future<List<TradeProduct>> productsOf(int genericId) async {
+  Future<List<TradeProduct>> productsOf(int genericId,
+      {bool includeArchived = false}) async {
     final rows = await (await db).query('products',
-        where: 'generic_id=?', whereArgs: [genericId], orderBy: 'brand_name');
+        where: includeArchived
+            ? 'generic_id=?'
+            : 'generic_id=? AND is_archived=0 AND generic_id IN (SELECT id FROM generics WHERE is_archived=0)',
+        whereArgs: [genericId], orderBy: 'brand_name');
     return rows.map(TradeProduct.fromMap).toList();
   }
 
   Future<List<TradeProduct>> allProducts() async {
-    final rows = await (await db).query('products', orderBy: 'brand_name');
+    final rows = await (await db).rawQuery('''
+      SELECT p.* FROM products p JOIN generics g ON g.id=p.generic_id
+      WHERE p.is_archived=0 AND g.is_archived=0 ORDER BY p.brand_name
+    ''');
     return rows.map(TradeProduct.fromMap).toList();
   }
 
@@ -404,7 +421,10 @@ class DBHelper {
 
   /// كل المنتجات مجمّعة حسب الدواء (استعلام واحد بدل استعلام لكل دواء)
   Future<Map<int, List<TradeProduct>>> productsGroupedByGeneric() async {
-    final rows = await (await db).query('products', orderBy: 'brand_name');
+    final rows = await (await db).rawQuery('''
+      SELECT p.* FROM products p JOIN generics g ON g.id=p.generic_id
+      WHERE p.is_archived=0 AND g.is_archived=0 ORDER BY p.brand_name
+    ''');
     final out = <int, List<TradeProduct>>{};
     for (final r in rows) {
       final p = TradeProduct.fromMap(r);

@@ -67,6 +67,9 @@ jobs:
       - name: Test secure AI Worker
         run: node tools/test_ai_worker.mjs
 
+      - name: Test APH data sync Worker
+        run: node tools/test_data_worker.mjs
+
       # Only the public Worker URL may be passed to the APK. Provider secrets
       # stay in Cloudflare Worker Secrets and are never present in GitHub.
       - name: Build release APK (universal)

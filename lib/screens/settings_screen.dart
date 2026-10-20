@@ -222,6 +222,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 decoration: InputDecoration(
                     labelText: S.t('Published database URL (JSON)',
                         'رابط قاعدة البيانات المنشورة (JSON)'),
+                    helperText: S.t(
+                        'For admin sync, use the Worker URL ending in /api/v1/database',
+                        'لمزامنة لوحة الإدارة استخدم رابط Worker المنتهي بـ /api/v1/database'),
                     border: const OutlineInputBorder())),
             const SizedBox(height: 10),
             Row(children: [

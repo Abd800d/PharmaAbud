@@ -1,0 +1,11 @@
+name = "aph-data-sync"
+main = "aph-data-worker.js"
+compatibility_date = "2026-10-18"
+workers_dev = true
+
+# Replace this value with the database_id printed by `wrangler d1 create aph-data`.
+[[d1_databases]]
+binding = "APH_DB"
+database_name = "aph-data"
+database_id = "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID"
+migrations_dir = "migrations"

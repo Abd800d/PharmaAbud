@@ -75,6 +75,7 @@ def fresh_v6(path):
     db.execute("INSERT INTO aph_meta VALUES('rxnorm_snapshot','test')")
     create_pharmacy_tables(db)
     db.execute("INSERT INTO pharmacy_stock_batches(product_id,batch_number,quantity,expiry_at,received_at) VALUES(1,'FRESH-LOT',4,4102444800000,1)")
+    migrate(db, 6)  # upgrade the populated v6 file to the current v7 archive schema
     db.commit()
     db.close()
     db = sqlite3.connect(path)
@@ -84,6 +85,11 @@ def fresh_v6(path):
     assert db.execute('SELECT body FROM messages').fetchone() == ('keep',)
     assert db.execute("SELECT value FROM aph_meta WHERE key='rxnorm_snapshot'").fetchone() == ('test',)
     assert db.execute('SELECT quantity FROM pharmacy_stock_batches').fetchone() == (4,)
+    assert db.execute('SELECT is_archived FROM generics WHERE id=1').fetchone() == (0,)
+    assert db.execute('SELECT is_archived FROM products WHERE id=1').fetchone() == (0,)
+    db.execute('UPDATE generics SET is_archived=1 WHERE id=1')
+    assert db.execute('SELECT COUNT(*) FROM generics WHERE is_archived=0').fetchone() == (0,)
+    assert db.execute('SELECT COUNT(*) FROM pharmacy_stock_batches WHERE product_id=1').fetchone() == (1,)
     try:
         db.execute('DELETE FROM products WHERE id=1')
     except sqlite3.IntegrityError:
@@ -113,12 +119,23 @@ def migrate(db, old_version):
         db.execute(META)
     if old_version < 6:
         create_pharmacy_tables(db)
+    if old_version < 7:
+        columns = {row[1] for row in db.execute('PRAGMA table_info(generics)')}
+        if 'is_archived' not in columns:
+            db.execute('ALTER TABLE generics ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0')
+        columns = {row[1] for row in db.execute('PRAGMA table_info(products)')}
+        if 'is_archived' not in columns:
+            db.execute('ALTER TABLE products ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0')
+    db.execute('CREATE INDEX IF NOT EXISTS idx_generics_archive_name ON generics(is_archived, name_en)')
+    db.execute('CREATE INDEX IF NOT EXISTS idx_products_archive_generic ON products(is_archived, generic_id)')
 
 
 def exercise_inventory_and_fefo(db):
     db.execute('PRAGMA foreign_keys=ON')
     db.execute(GENERIC)
     db.execute(PRODUCT)
+    db.execute('ALTER TABLE generics ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0')
+    db.execute('ALTER TABLE products ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0')
     db.execute("INSERT INTO generics(name_en) VALUES('Test medicine')")
     db.execute("INSERT INTO products(generic_id,brand_name,strength,dosage_form) VALUES(1,'Test brand','10 mg','tablet')")
     create_pharmacy_tables(db)
@@ -206,7 +223,9 @@ with tempfile.TemporaryDirectory(prefix='aph-sqlite-') as directory:
         assert db.execute('SELECT body,created_at FROM messages').fetchone() == ('keep', 123)
         assert 'source_id' in {r[1] for r in db.execute('PRAGMA table_info(messages)')}
         assert 'is_admin' in {r[1] for r in db.execute('PRAGMA table_info(messages)')}
+        assert db.execute('SELECT is_archived FROM generics WHERE id=1').fetchone() == (0,)
+        assert db.execute('SELECT is_archived FROM products WHERE id=1').fetchone() == (0,)
         assert db.execute("SELECT name FROM sqlite_master WHERE name='aph_meta'").fetchone() == ('aph_meta',)
         db.close()
 
-print('SQLite on-disk regression passed: fresh v6, legacy upgrades, FEFO stock deduction, expiry exclusion and failed-sale rollback.')
+print('SQLite on-disk regression passed: v7 archive migration from v2–v6, data preservation, FEFO deduction, expiry exclusion and failed-sale rollback.')

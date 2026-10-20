@@ -457,7 +457,8 @@ class _PointOfSaleTabState extends State<_PointOfSaleTab> {
   Future<void> _find(String q) async {
     setState(() => _loading = true);
     try {
-      final rows = await PharmacyService.instance.searchProducts(q, limit: 80);
+      final rows = await PharmacyService.instance.searchProducts(q, limit: 80,
+          allowArchivedWithStock: true);
       if (mounted) setState(() { _products = rows.map(PharmacyProduct.fromMap).toList(); _loading = false; });
     } catch (e) { if (mounted) setState(() { _loading = false; _error = e.toString(); }); }
   }

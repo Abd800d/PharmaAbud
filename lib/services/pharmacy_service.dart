@@ -58,7 +58,7 @@ class PharmacyService {
   }
 
   Future<List<Map<String, Object?>>> searchProducts(String query,
-      {int limit = 50}) async {
+      {int limit = 50, bool allowArchivedWithStock = false}) async {
     final d = await _db;
     final q = query.trim();
     final like = '%$q%';
@@ -81,13 +81,15 @@ class PharmacyService {
           ORDER BY b.received_at DESC LIMIT 1
         ),'') AS barcode
       FROM products p JOIN generics g ON g.id=p.generic_id
-      WHERE (?='' OR p.brand_name LIKE ? OR g.name_en LIKE ? OR
+      WHERE ((p.is_archived=0 AND g.is_archived=0) OR (?=1 AND EXISTS (
+        SELECT 1 FROM pharmacy_stock_batches a WHERE a.product_id=p.id AND a.quantity>0
+      ))) AND (?='' OR p.brand_name LIKE ? OR g.name_en LIKE ? OR
         g.name_ar LIKE ? OR p.strength LIKE ? OR p.dosage_form LIKE ? OR
         EXISTS (SELECT 1 FROM pharmacy_stock_batches b
           WHERE b.product_id=p.id AND b.barcode LIKE ?))
       ORDER BY g.name_en COLLATE NOCASE, p.brand_name COLLATE NOCASE
       LIMIT ?
-    ''', [today, today, q, like, like, like, like, like, like, limit]);
+    ''', [today, today, allowArchivedWithStock ? 1 : 0, q, like, like, like, like, like, like, limit]);
   }
 
   Future<List<Map<String, Object?>>> stockBatches({String query = '',

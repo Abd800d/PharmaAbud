@@ -22,10 +22,11 @@ class SyncResult {
   });
 }
 
-/// مزامنة قاعدة APH مع «موقع التحكم» الذي يديره د. عبدالمجيد:
-/// يسحب ملف aph-database.json المنشور (GitHub / أي رابط HTTPS) ويدمجه في
-/// قاعدة الجهاز — فيرى كل مستخدم أي دواء أو منتج أو وكيل أو إعلان يُحدَّث.
-/// يعمل فقط عند توفر الإنترنت، ولا يمسّ بيانات المستخدم عند انقطاعه.
+/// One-way catalogue sync: downloads the published APH JSON snapshot and merges
+/// it into on-device SQLite. Configure the Cloudflare Worker read endpoint in
+/// settings for admin-to-device updates; the public GitHub JSON remains a
+/// fallback for offline/unconfigured deployments. Local pharmacy data is never
+/// uploaded, and the app continues to work without an internet connection.
 class SyncService {
   /// روابط بديلة تُجرّب بالترتيب إذا فشل الرابط الأساسي
   static List<String> get urls {
@@ -106,6 +107,7 @@ class SyncService {
           pregnancy: (g['pregnancy'] ?? '').toString(),
           imagePath: (g['image'] ?? '').toString(),
           source: (g['source'] ?? 'APH sync').toString(),
+          isArchived: _flag(g['archived']) || _flag(g['isArchived']),
         ));
         newD++;
       } else {
@@ -113,26 +115,25 @@ class SyncService {
         final merged = GenericDrug(
           id: gid,
           nameEn: existing.nameEn,
-          nameAr: _fill(existing.nameAr, g['genericAr']),
-          systemId: _fill(existing.systemId, g['systemId'], fallback: 'misc'),
-          subgroupEn: _fill(existing.subgroupEn, g['subgroupEn'],
+          nameAr: _preferRemote(existing.nameAr, g['genericAr']),
+          systemId: _preferRemote(existing.systemId, g['systemId'], fallback: 'misc'),
+          subgroupEn: _preferRemote(existing.subgroupEn, g['subgroupEn'],
               fallback: 'General'),
           subgroupAr:
-              _fill(existing.subgroupAr, g['subgroupAr'], fallback: 'عام'),
-          atc: _fill(existing.atc, g['atc']),
-          introduction: _fill(existing.introduction, g['introduction']),
-          mechanism: _fill(existing.mechanism, g['mechanism']),
-          indications: _fill(existing.indications, g['indications']),
-          dosage: _fill(existing.dosage, g['dosage']),
-          interactions: _fill(existing.interactions, g['interactions']),
-          warnings: _fill(existing.warnings, g['warnings']),
-          pregnancy: _fill(existing.pregnancy, g['pregnancy']),
-          imagePath: existing.imagePath.isEmpty
-              ? (g['image'] ?? '').toString()
-              : existing.imagePath,
-          source: existing.source.isEmpty
-              ? (g['source'] ?? 'APH sync').toString()
-              : existing.source,
+              _preferRemote(existing.subgroupAr, g['subgroupAr'], fallback: 'عام'),
+          atc: _preferRemote(existing.atc, g['atc']),
+          introduction: _preferRemote(existing.introduction, g['introduction']),
+          mechanism: _preferRemote(existing.mechanism, g['mechanism']),
+          indications: _preferRemote(existing.indications, g['indications']),
+          dosage: _preferRemote(existing.dosage, g['dosage']),
+          interactions: _preferRemote(existing.interactions, g['interactions']),
+          warnings: _preferRemote(existing.warnings, g['warnings']),
+          pregnancy: _preferRemote(existing.pregnancy, g['pregnancy']),
+          imagePath: _preferRemote(existing.imagePath, g['image']),
+          source: _preferRemote(existing.source, g['source'], fallback: 'APH sync'),
+          isArchived: g.containsKey('archived') || g.containsKey('isArchived')
+              ? (_flag(g['archived']) || _flag(g['isArchived']))
+              : existing.isArchived,
         );
         await db.updateGeneric(merged);
         upD++;
@@ -149,10 +150,21 @@ class SyncService {
         final manuf = (pm['manufacturer'] ?? '').toString();
         final country = (pm['country'] ?? '').toString();
         final agent = (pm['agentYemen'] ?? '').toString();
-        final verified = pm['verified'] == true || pm['verified'] == 1;
-        final exists =
-            await db.productExists(gid, brand, strength, form, manuf);
-        if (!exists) {
+        final verified = _flag(pm['verified']);
+        final candidates = (await db.productsOf(gid, includeArchived: true))
+            .where((p) =>
+                p.brandName.toLowerCase() == brand.toLowerCase() &&
+                p.strength.toLowerCase() == strength.toLowerCase() &&
+                p.dosageForm.toLowerCase() == form.toLowerCase())
+            .toList();
+        final exactManufacturer = candidates.where((p) =>
+            p.manufacturer.toLowerCase() == manuf.toLowerCase()).toList();
+        // Match exact product identity first. If the admin changed the company,
+        // update a sole matching brand/strength/form rather than duplicating it.
+        final local = exactManufacturer.isNotEmpty
+            ? exactManufacturer
+            : candidates.length == 1 ? candidates : <TradeProduct>[];
+        if (local.isEmpty) {
           await db.insertTrade(TradeProduct(
             genericId: gid,
             brandName: brand,
@@ -164,33 +176,37 @@ class SyncService {
             imagePath: (pm['image'] ?? '').toString(),
             source: (pm['source'] ?? 'APH sync').toString(),
             verified: verified,
+            isArchived: _flag(pm['archived']) || _flag(pm['isArchived']),
           ));
           newP++;
         } else {
-          // تحديث الوكيل/الدولة/التوثيق إن كانت ناقصة محلياً
-          final local = (await db.productsOf(gid)).where((p) =>
-              p.brandName.toLowerCase() == brand.toLowerCase() &&
-              p.strength.toLowerCase() == strength.toLowerCase() &&
-              p.dosageForm.toLowerCase() == form.toLowerCase());
+          // The server's non-empty product fields and archive marker are authoritative.
           for (final p in local) {
-            if (p.agentYemen.isNotEmpty && p.country.isNotEmpty && p.verified) {
-              continue;
-            }
-            await db.updateTrade(TradeProduct(
+            final remoteArchived = pm.containsKey('archived') || pm.containsKey('isArchived')
+                ? (_flag(pm['archived']) || _flag(pm['isArchived']))
+                : p.isArchived;
+            final merged = TradeProduct(
               id: p.id,
               genericId: gid,
               brandName: p.brandName,
-              manufacturer: p.manufacturer.isEmpty ? manuf : p.manufacturer,
-              country: p.country.isEmpty ? country : p.country,
+              manufacturer: _preferRemote(p.manufacturer, pm['manufacturer']),
+              country: _preferRemote(p.country, pm['country']),
               strength: p.strength,
               dosageForm: p.dosageForm,
-              agentYemen: p.agentYemen.isEmpty ? agent : p.agentYemen,
-              imagePath: p.imagePath.isEmpty
-                  ? (pm['image'] ?? '').toString()
-                  : p.imagePath,
-              source: p.source.isEmpty ? 'APH sync' : p.source,
-              verified: p.verified || verified,
-            ));
+              agentYemen: _preferRemote(p.agentYemen, pm['agentYemen']),
+              imagePath: _preferRemote(p.imagePath, pm['image']),
+              source: _preferRemote(p.source, pm['source'], fallback: 'APH sync'),
+              verified: pm.containsKey('verified') ? verified : p.verified,
+              isArchived: remoteArchived,
+            );
+            if (merged.manufacturer == p.manufacturer &&
+                merged.country == p.country &&
+                merged.agentYemen == p.agentYemen &&
+                merged.imagePath == p.imagePath &&
+                merged.source == p.source &&
+                merged.verified == p.verified &&
+                merged.isArchived == p.isArchived) continue;
+            await db.updateTrade(merged);
             upP++;
           }
         }
@@ -237,10 +253,15 @@ class SyncService {
     );
   }
 
-  /// لا يستبدل بيانات حرّرها المستخدم محلياً — يملأ الفارغ فقط
-  static String _fill(String local, Object? remote, {String fallback = ''}) {
-    final r = (remote ?? '').toString().trim();
-    if (local.trim().isNotEmpty) return local;
-    return r.isEmpty ? fallback : r;
+  static bool _flag(Object? value) => value == true || value == 1 ||
+      value?.toString().toLowerCase() == 'true' || value?.toString() == '1';
+
+  /// The published admin snapshot is authoritative for non-empty shared fields;
+  /// blank/missing remote values never erase locally available information.
+  static String _preferRemote(String local, Object? remote,
+      {String fallback = ''}) {
+    final value = (remote ?? '').toString().trim();
+    if (value.isNotEmpty) return value;
+    return local.trim().isEmpty ? fallback : local;
   }
 }
