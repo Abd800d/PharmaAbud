@@ -650,7 +650,7 @@ String _receiptText(Map<String, Object?> sale, List<Map<String, Object?>> items)
   final paid = (sale['paid'] as num? ?? 0).toDouble();
   final due = (total - paid).clamp(0, double.infinity).toDouble();
   final change = (paid - total).clamp(0, double.infinity).toDouble();
-  b.writeln('--------------------------------')
+  b..writeln('--------------------------------')
     ..writeln('Subtotal: ${_money((sale['subtotal'] as num? ?? 0).toDouble())}')
     ..writeln('Discount: ${_money((sale['discount'] as num? ?? 0).toDouble())}')
     ..writeln('TOTAL: ${_money(total)}')
