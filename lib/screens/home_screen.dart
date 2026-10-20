@@ -619,10 +619,8 @@ class _AiTabState extends State<_AiTab> {
               child: Text(
                   provider == 'offline'
                       ? S.t(
-                          'Offline mode — answers come from the local APH database. '
-                          'Add a Gemini / OpenAI key for real cloud AI. Tap to open settings.',
-                          'وضع عدم الاتصال — الإجابات من قاعدة APH المحلية. '
-                          'أضف مفتاح Gemini أو OpenAI للحصول على ذكاء اصطناعي سحابي حقيقي. اضغط للفتح.')
+                          'Offline mode — answers come from local APH data. The owner must configure the secure AI Worker URL.',
+                          'وضع محلي — الإجابات من قاعدة APH. يجب على المالك ضبط رابط وسيط الذكاء الاصطناعي الآمن.')
                       : S.t(
                           'Cloud AI active ($provider) — grounded on the APH database. '
                           'Verify officially via openFDA / DailyMed. Tap for settings.',

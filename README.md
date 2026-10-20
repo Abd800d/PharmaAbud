@@ -37,25 +37,15 @@
 | واجهة APH + اسم المالك | ✅ شعار APH، وفي الزاوية Abdulmajeed Almakhedhi، وحقوق د. عبدالمجيد في كل مكان |
 | أندرويد APK | ✅ يُبنى تلقائياً في GitHub Actions (universal + split-per-abi) ويُنشر في Release دائم |
 
-## 🧠 تفعيل الذكاء الاصطناعي (Gemini / OpenAI)
-المفاتيح **لا تُكتب في الكود ولا في المستودع** (أمان). لك طريقتان:
+## 🧠 الذكاء الاصطناعي الآمن (Gemini / OpenAI)
+المفاتيح لا تدخل APK أو JavaScript أو إعدادات GitHub مطلقاً. تُحفظ فقط كـ **Cloudflare Worker Secrets**؛ والتطبيق يحتفظ بعنوان Worker العام فقط.
 
-**1) داخل التطبيق (فورية):** المزيد ← إعدادات الذكاء الاصطناعي ← الصق مفتاح
-Google AI Studio (مجاني: https://aistudio.google.com/app/apikey) أو مفتاح OpenAI ← حفظ ← اختبار الاتصال.
-يُحفظ المفتاح على هذا الجهاز فقط.
+1. انشر الوسيط حسب `cloudflare/README.md`.
+2. احفظ `GEMINI_API_KEY` في Worker Secrets؛ يمكن أن تتوفر حصة Gemini مجانية بحسب شروط Google المتغيرة، ولا يوجد ضمان لمجانية غير محدودة.
+3. في إعدادات APH أدخل عنوان Worker من نوع HTTPS ثم اضغط «اختبار الاتصال». الوضع التلقائي يستخدم Gemini فقط ولا يتحول تلقائياً إلى OpenAI؛ اختيار OpenAI صريح وقد يكون مدفوعاً.
+4. بدلاً من إدخال الرابط بعد التثبيت، ضع عنوان Worker العام فقط في GitHub Actions **Variable** باسم `APH_AI_PROXY`. لا تضع أي مفتاح في Variables أو Secrets الخاصة ببناء APK.
 
-**2) داخل كل APK تُصدره (للمستخدمين):** أضف السرّين في GitHub ←
-Settings ← Secrets and variables ← Actions:
-```
-APH_GEMINI_KEY   = مفتاح Google AI Studio
-APH_OPENAI_KEY   = مفتاح OpenAI
-```
-ثم أعد تشغيل الـ workflow — يُحقنان وقت البناء بـ`--dart-define` ويصبح المساعد الذكي
-وتحليل الصور يعملان مباشرة عند كل من يثبّت APK.
-
-> ⚠️ **تنبيه أمني مهم:** أي مفتاح يُرسل في محادثة أو يُلتقط بلقطة شاشة يُعتبر مكشوفاً.
-> **احذف مفتاح OpenAI القديم وأنشئ غيره** من https://platform.openai.com/api-keys،
-> ولا تضع مفاتيح في المستودع أو في لقطات الشاشة أبداً.
+أي مفتاح سبق مشاركته أو ظهوره في صورة يجب إلغاؤه وإنشاء بديل. لا ترسله في المحادثة ولا تضفه إلى المشروع.
 
 ## 🌐 تجربة فورية دون تثبيت (نسخة الويب PWA)
 افتح `webapp/index.html` بأي خادم ثابت — نفس البيانات والمزايا: بحث ضبابي مقسّم، 18 جهازاً،
@@ -73,14 +63,17 @@ APH_OPENAI_KEY   = مفتاح OpenAI
 flutter create --platforms=android --project-name pharma_encyclopedia --org com.abdulmajeedpharma /tmp/aph_gen
 cp -r /tmp/aph_gen/android android && python3 tools/patch_android.py
 flutter pub get
-dart analyze --no-fatal-infos --no-fatal-warnings .     # بوابة الأخطاء
+flutter analyze
 flutter build apk --release --split-per-abi \
-  --dart-define=APH_GEMINI_KEY="..." --dart-define=APH_OPENAI_KEY="..."
+  --dart-define=APH_AI_PROXY="https://aph-ai-proxy.example.workers.dev"
+# الرابط عام وليس سراً؛ لا تمرّر مفاتيح API إلى flutter build.
 # الناتج: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
 ```
 
-## 📦 توسعة قاعدة البيانات (أكثر من مليون سجل)
-القاعدة الحالية **338 مادة فعالة / 692 منتجاً** كلها قابلة للتعديل، والطريق المهني للتوسعة:
+## 📦 قاعدة دوائية تعمل دون اتصال
+تضم قاعدة APH المنسقة **338 مادة / 692 منتجاً**، إضافة إلى مصطلحات NLM RxNorm: **19,594 اسماً دوائياً و9,629 اسماً تجارياً/شكلاً**. بعد إزالة التكرار تُضاف المصطلحات إلى SQLite المحلية؛ بيانات RxNorm المستوردة أسماء للبحث فقط، وتصنيفها يحتاج مراجعة، ولا تتضمن جرعات أو إرشادات سريرية أو مصنعاً أو وكيلاً يمنياً. تفاصيل المصدر والنطاق في `assets/data/RXNORM_SOURCE.md`.
+
+لتوسيع البيانات المنسقة مهنياً:
 1. `tools/seed_ext.py` — أضف أدوية جديدة بنفس الصيغة (يُدمج تلقائياً ويزيل المكرر).
 2. `python3 tools/build_seed.py` — يولّد `assets/data/drugs_seed.json` + `webapp/drugs-data.js`
    + **`webapp/aph-database.json`** (ملف المزامنة المنشور).

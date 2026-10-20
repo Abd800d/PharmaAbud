@@ -86,11 +86,11 @@ class _DrugDetailScreenState extends State<DrugDetailScreen> {
   /// جلب البيانات الناقصة من الإنترنت بواسطة الذكاء الاصطناعي (Gemini / OpenAI)
   /// وحفظها دائماً في قاعدة الجهاز — لا يستبدل أي حقل حرّره المستخدم.
   Future<void> _enrichWithAi() async {
-    if (!AiClient.hasCloudKey) {
+    if (!AiClient.hasCloud) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(S.t(
-              'Add a Gemini or OpenAI key first: Settings → AI Drug Assistant.',
-              'أضف مفتاح Gemini أو OpenAI أولاً: الإعدادات ← المساعد الدوائي الذكي.'))));
+              'Configure the secure AI Worker URL in Settings first.',
+              'اضبط رابط وسيط الذكاء الاصطناعي الآمن في الإعدادات أولاً.'))));
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -100,8 +100,9 @@ class _DrugDetailScreenState extends State<DrugDetailScreen> {
     if (!mounted) return;
     if (data.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(S.t('No internet or the AI key is invalid. Local data is unchanged.',
-              'لا يوجد إنترنت أو أن مفتاح الذكاء الاصطناعي غير صالح — لم تتغير بياناتك.'))));
+          content: Text(S.t(
+              'Secure AI request failed. Check the Worker URL, its server secret, and internet access. Local data is unchanged.',
+              'فشل طلب الذكاء الاصطناعي الآمن. تحقق من رابط Worker وسرّ المزوّد والإنترنت؛ لم تتغير بياناتك.'))));
       return;
     }
     String pick(String key, String local) {

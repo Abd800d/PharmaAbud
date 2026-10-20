@@ -6,27 +6,33 @@
 (function () {
   'use strict';
   const K = {
-    provider: 'aph_ai_provider', gemini: 'aph_gemini_key', openai: 'aph_openai_key',
+    provider: 'aph_ai_provider', proxy: 'aph_ai_proxy',
     gmodel: 'aph_gemini_model', omodel: 'aph_openai_model', url: 'aph_sync_url',
     last: 'aph_last_sync',
   };
   const DEFAULT_URL = 'https://raw.githubusercontent.com/Abd800d/PharmaAbud/main/webapp/aph-database.json';
   const get = (k, d) => localStorage.getItem(k) || d;
   const set = (k, v) => localStorage.setItem(k, v);
-
+  // Remove credentials saved by old client-side versions. Browser storage is not a secret store.
+  localStorage.removeItem('aph_gemini_key');
+  localStorage.removeItem('aph_openai_key');
+  function safeProxy(value) {
+    try {
+      const u = new URL(String(value || '').trim());
+      return u.protocol === 'https:' && !!u.hostname && !u.username && !u.password
+        && !u.search && !u.hash && !/(AIza[0-9A-Za-z_-]{12,}|sk-[A-Za-z0-9_-]{12,})/.test(value);
+    } catch (_) { return false; }
+  }
   const APH = {
     get provider() { return get(K.provider, 'auto'); },
-    get geminiKey() { return (get(K.gemini, '') || '').trim(); },
-    get openaiKey() { return (get(K.openai, '') || '').trim(); },
+    get proxyUrl() { return get(K.proxy, '').trim(); },
     get geminiModel() { return get(K.gmodel, 'gemini-2.5-flash'); },
     get openaiModel() { return get(K.omodel, 'gpt-4o-mini'); },
     get syncUrl() { return get(K.url, DEFAULT_URL); },
-    hasKey() { return !!(APH.geminiKey || APH.openaiKey); },
+    hasCloud() { return safeProxy(APH.proxyUrl); },
     active() {
-      const p = APH.provider;
-      if (p === 'offline') return 'offline';
-      if (p === 'gemini' || p === 'openai') return p;
-      return APH.geminiKey ? 'gemini' : (APH.openaiKey ? 'openai' : 'offline');
+      if (APH.provider === 'offline' || !APH.hasCloud()) return 'offline';
+      return APH.provider === 'openai' ? 'openai' : 'gemini';
     },
   };
   window.APH = APH;
@@ -66,54 +72,34 @@
     } catch (e) { return ''; }
   };
 
-  async function callGemini(prompt, dataUrl) {
-    if (!APH.geminiKey) throw new Error('no Gemini key');
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${APH.geminiModel}:generateContent?key=${encodeURIComponent(APH.geminiKey)}`;
-    const parts = [{ text: prompt }];
+  async function cloud(prompt, dataUrl, requestedProvider) {
+    if (!APH.hasCloud()) throw new Error('Secure AI Worker URL is missing or invalid.');
+    const provider = requestedProvider || (APH.provider === 'openai' ? 'openai' : 'gemini');
+    let image = '', mime = 'image/jpeg';
     if (dataUrl) {
-      const i = dataUrl.indexOf(',');
-      parts.unshift({ inline_data: { mime_type: dataUrl.slice(5, i).replace('data:', ''), data: dataUrl.slice(i + 1) } });
+      const comma = dataUrl.indexOf(',');
+      const header = dataUrl.slice(0, comma);
+      image = dataUrl.slice(comma + 1);
+      mime = (header.match(/^data:([^;]+);base64/i) || [])[1] || 'image/jpeg';
+      if (image.length > 7 * 1024 * 1024) throw new Error('Image is too large for the secure AI service.');
     }
-    const res = await fetch(url, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+    const response = await fetch(APH.proxyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM }] },
-        contents: [{ role: 'user', parts }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 1400 },
+        provider,
+        model: provider === 'openai' ? APH.openaiModel : APH.geminiModel,
+        system: SYSTEM,
+        prompt,
+        maxTokens: 1400,
+        ...(image ? { image, mime } : {}),
       }),
     });
-    const j = await res.json();
-    if (!res.ok) throw new Error(`Gemini HTTP ${res.status}: ${clip(j.error && j.error.message || JSON.stringify(j), 180)}`);
-    const c = (j.candidates || [])[0];
-    const txt = ((c && c.content && c.content.parts) || []).map(p => p.text || '').join('').trim();
-    if (!txt) throw new Error('Gemini returned an empty answer');
-    return { text: txt, provider: 'gemini' };
-  }
-
-  async function callOpenAI(prompt, dataUrl) {
-    if (!APH.openaiKey) throw new Error('no OpenAI key');
-    const content = dataUrl
-      ? [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: dataUrl } }]
-      : prompt;
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + APH.openaiKey },
-      body: JSON.stringify({ model: APH.openaiModel, temperature: 0.2, max_tokens: 1400, messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content }] }),
-    });
-    const j = await res.json();
-    if (!res.ok) throw new Error(`OpenAI HTTP ${res.status}: ${clip(j.error && j.error.message || JSON.stringify(j), 180)}`);
-    const txt = ((j.choices || [])[0] || {}).message;
-    if (!txt || !txt.content) throw new Error('OpenAI returned an empty answer');
-    return { text: String(txt.content).trim(), provider: 'openai' };
-  }
-
-  async function cloud(prompt, dataUrl) {
-    const p = APH.active();
-    if (p === 'offline') throw new Error('offline mode');
-    const order = p === 'openai' ? [callOpenAI, callGemini] : [callGemini, callOpenAI];
-    let lastErr = null;
-    for (const fn of order) { try { return await fn(prompt, dataUrl); } catch (e) { lastErr = e; } }
-    throw lastErr || new Error('AI unavailable');
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(`Secure AI HTTP ${response.status}: ${clip(data.error || 'Request failed', 220)}`);
+    const text = String(data.text || '').trim();
+    if (!text) throw new Error('AI provider returned an empty answer.');
+    return { text, provider: data.provider || provider };
   }
 
   // --------- chat: cloud first, local database fallback ---------
@@ -148,9 +134,9 @@
     const f = inp && inp.files && inp.files[0];
     if (inp) inp.value = '';
     if (!f) return;
-    if (!APH.hasKey()) {
-      alert(L('أضف مفتاح Gemini أو OpenAI أولاً من «الإعدادات الذكية» في صفحة المزيد.',
-        'Add a Gemini or OpenAI key first from "AI settings" on the More page.'));
+    if (!APH.hasCloud()) {
+      alert(L('يجب ضبط رابط خادم الذكاء الاصطناعي الآمن أولاً من الإعدادات الذكية.',
+        'Configure the secure AI server URL first in AI settings.'));
       window.open('https://lens.google.com', '_blank');
       return;
     }
@@ -260,41 +246,47 @@
     sheet(`<h3>🧠 ${L('الإعدادات الذكية والمزامنة', 'AI & sync settings')}</h3>
       <label class="f">${L('مزوّد الذكاء الاصطناعي', 'AI provider')}</label>
       <select class="in" id="ap_prov">
-        <option value="auto"${APH.provider === 'auto' ? ' selected' : ''}>${L('تلقائي — Gemini ثم OpenAI', 'Auto - Gemini then OpenAI')}</option>
+        <option value="auto"${APH.provider === 'auto' ? ' selected' : ''}>${L('تلقائي — Gemini فقط، دون تحويل إلى مدفوع', 'Automatic — Gemini only; no paid fallback')}</option>
         <option value="gemini"${APH.provider === 'gemini' ? ' selected' : ''}>Google Gemini</option>
-        <option value="openai"${APH.provider === 'openai' ? ' selected' : ''}>OpenAI GPT</option>
+        <option value="openai"${APH.provider === 'openai' ? ' selected' : ''}>OpenAI GPT (may be paid)</option>
         <option value="offline"${APH.provider === 'offline' ? ' selected' : ''}>${L('دون إنترنت — قاعدة APH فقط', 'Offline - local APH database only')}</option>
       </select>
-      <label class="f">Google AI Studio (Gemini) API key</label><input class="in" id="ap_gk" type="password" value="${esc(APH.geminiKey)}" placeholder="AIza…">
+      <label class="f">${L('رابط Cloudflare Worker العام (ليس سراً)', 'Public Cloudflare Worker URL (not a secret)')}</label>
+      <input class="in" id="ap_proxy" value="${esc(APH.proxyUrl)}" placeholder="https://aph-ai-proxy.example.workers.dev">
       <label class="f">Gemini model</label><input class="in" id="ap_gm" value="${esc(APH.geminiModel)}">
-      <label class="f">OpenAI API key</label><input class="in" id="ap_ok" type="password" value="${esc(APH.openaiKey)}" placeholder="sk-…">
       <label class="f">OpenAI model</label><input class="in" id="ap_om" value="${esc(APH.openaiModel)}">
       <label class="f">${L('رابط القاعدة المنشورة من موقع التحكم', 'Published database URL (control site)')}</label>
       <input class="in" id="ap_url" value="${esc(APH.syncUrl)}">
-      <p class="mut">🔒 ${L('تُحفظ المفاتيح في هذا المتصفح فقط ولا تُرفع لأي خادم. إذا شاركته في محادثة فألغه وأنشئ غيره.',
-        'Keys are stored in this browser only and never uploaded. If you ever shared one, revoke it and create a new key.')}</p>
+      <p class="mut">🔒 ${L('لا تضع مفتاح API هنا. احفظ GEMINI_API_KEY كسرّ في Cloudflare Worker. حصة Gemini المجانية قد تتغير؛ OpenAI قد يكون مدفوعاً.',
+        'Never enter an API key here. Store GEMINI_API_KEY as a Cloudflare Worker Secret. Gemini free quota may change; OpenAI may be paid.')}</p>
       <div class="row" style="margin-top:10px">
         <button class="btn" onclick="APH.saveSettings()">${L('حفظ', 'Save')}</button>
         <button class="btn ghost" onclick="APH.testAI()">${L('اختبار الاتصال', 'Test connection')}</button>
         <button class="btn ghost" onclick="APH.sync()">${L('زامن القاعدة الآن', 'Sync database now')}</button>
-        <button class="btn ghost" onclick="window.open('https://aistudio.google.com/app/apikey','_blank')">${L('مفتاح Gemini مجاني', 'Free Gemini key')}</button>
       </div><p class="mut" id="ap_status"></p>`);
   };
 
   APH.saveSettings = function () {
+    const proxy = $('ap_proxy').value.trim();
+    const s = $('ap_status');
+    if (proxy && !safeProxy(proxy)) {
+      if (s) s.textContent = L('رابط غير صالح: أدخل HTTPS Worker URL فقط، ولا تلصق مفتاح API.',
+        'Invalid URL: enter an HTTPS Worker URL only; never paste an API key.');
+      return false;
+    }
     set(K.provider, $('ap_prov').value);
-    set(K.gemini, $('ap_gk').value.trim());
+    set(K.proxy, proxy);
     set(K.gmodel, $('ap_gm').value.trim() || 'gemini-2.5-flash');
-    set(K.openai, $('ap_ok').value.trim());
     set(K.omodel, $('ap_om').value.trim() || 'gpt-4o-mini');
     set(K.url, $('ap_url').value.trim() || DEFAULT_URL);
-    const s = $('ap_status');
-    if (s) s.textContent = L('✅ حُفظ — المزوّد الحالي: ', '✅ Saved - active provider: ') + APH.active();
+    if (s) s.textContent = L('✅ حُفظت الإعدادات — مفاتيح المزوّد لا توجد في المتصفح.',
+      '✅ Settings saved — provider keys are not stored in this browser.');
     APH.paintBadges();
+    return true;
   };
 
   APH.testAI = async function () {
-    APH.saveSettings();
+    if (!APH.saveSettings()) return;
     const s = $('ap_status');
     s.textContent = L('يختبر…', 'Testing…');
     try {
@@ -307,7 +299,7 @@
     document.querySelectorAll('[data-aph-provider]').forEach(el => {
       const p = APH.active();
       el.textContent = p === 'offline'
-        ? L('📴 مساعد محلي — أضف مفتاح AI', '📴 Local assistant - add an AI key')
+        ? L('📴 مساعد محلي — اضبط خادم AI الآمن', '📴 Local assistant - configure the secure AI server')
         : '☁ ' + (p === 'gemini' ? 'Gemini (Google AI)' : 'OpenAI GPT');
     });
     const last = Number(get(K.last, '0') || 0);
@@ -367,7 +359,7 @@
           'Downloads every drug, product, Yemen agent and announcement published by Dr. Abdulmajeed and stores them permanently in this browser.')}</p>
         <p class="mut" data-aph-sync></p>
         <div class="row"><button class="btn" onclick="APH.sync()">⬇ ${L('زامن الآن', 'Sync now')}</button>
-        <button class="btn ghost" onclick="APH.settings()">🧠 ${L('الإعدادات الذكية ومفاتيح AI', 'AI settings & keys')}</button></div>`;
+        <button class="btn ghost" onclick="APH.settings()">🧠 ${L('الإعدادات الذكية', 'AI settings')}</button></div>`;
       more.insertBefore(card, more.children[1]);
     }
     APH.paintBadges();

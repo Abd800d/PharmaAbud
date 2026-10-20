@@ -1,0 +1,11 @@
+name = "aph-ai-proxy"
+main = "aph-ai-worker.js"
+compatibility_date = "2026-10-18"
+workers_dev = true
+
+# Per-IP limit intended for 18 institutional devices while discouraging abuse.
+[[unsafe.bindings]]
+name = "RATE_LIMIT"
+type = "ratelimit"
+namespace_id = "817331"
+simple = { limit = 30, period = 60 }
