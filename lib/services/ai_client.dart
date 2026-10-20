@@ -22,10 +22,6 @@ class AiClient {
   static bool get hasCloud => AppSettings.aiProxyUrl.value.trim().isNotEmpty;
   static String lastEnrichError = '';
 
-  static String _modelFor(String provider) => provider == 'openai'
-      ? AppSettings.openAiModel.value
-      : AppSettings.geminiModel.value;
-
   static String get _systemPrompt => S.ar
       ? '''أنت «مساعد APH الدوائي» — مساعد مرجعي للصيادلة والأطباء في اليمن والوطن العربي.
 القواعد:

@@ -75,7 +75,7 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
         TextField(controller: _ar, decoration: _dec(S.t('Generic name (Arabic)', 'الاسم العلمي بالعربية'))),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
-          value: _systemId, decoration: _dec(S.t('Body system', 'الجهاز / التصنيف')),
+          initialValue: _systemId, decoration: _dec(S.t('Body system', 'الجهاز / التصنيف')),
           items: kSystems.map((s) => DropdownMenuItem(
               value: s.id, child: Text(S.ar ? s.ar : s.en))).toList(),
           onChanged: (v) => setState(() => _systemId = v ?? 'misc'),
