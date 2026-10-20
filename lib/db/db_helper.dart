@@ -18,7 +18,9 @@ class DBHelper {
 
   Future<Database> _open() async {
     final path = p.join(await getDatabasesPath(), 'abdulmajeedpharma.db');
-    return openDatabase(path, version: 5, onCreate: (d, v) async {
+    return openDatabase(path, version: 6,
+        onConfigure: (d) async => d.execute('PRAGMA foreign_keys = ON'),
+        onCreate: (d, v) async {
       await d.execute('''CREATE TABLE generics(
         id INTEGER PRIMARY KEY AUTOINCREMENT, name_en TEXT NOT NULL,
         name_ar TEXT, system_id TEXT, subgroup_en TEXT, subgroup_ar TEXT,
@@ -37,6 +39,7 @@ class DBHelper {
       await d.execute('CREATE TABLE favorites(generic_id INTEGER PRIMARY KEY)');
       await d.execute('''CREATE TABLE aph_meta(
         key TEXT PRIMARY KEY, value TEXT NOT NULL)''');
+      await _createPharmacyTables(d);
     }, onUpgrade: (d, oldV, newV) async {
       // Upgrade legacy message tables additively; never drop user/admin messages.
       final messageTable = await d.rawQuery(
@@ -67,7 +70,63 @@ class DBHelper {
         await d.execute('''CREATE TABLE IF NOT EXISTS aph_meta(
           key TEXT PRIMARY KEY, value TEXT NOT NULL)''');
       }
+      if (oldV < 6) await _createPharmacyTables(d);
     });
+  }
+
+  static Future<void> _createPharmacyTables(DatabaseExecutor d) async {
+    await d.execute('''CREATE TABLE IF NOT EXISTS pharmacy_stock_batches(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
+      batch_number TEXT NOT NULL,
+      barcode TEXT NOT NULL DEFAULT '',
+      quantity INTEGER NOT NULL CHECK(quantity >= 0),
+      minimum_stock INTEGER NOT NULL DEFAULT 5 CHECK(minimum_stock >= 0),
+      purchase_price REAL NOT NULL DEFAULT 0 CHECK(purchase_price >= 0),
+      sale_price REAL NOT NULL DEFAULT 0 CHECK(sale_price >= 0),
+      expiry_at INTEGER NOT NULL,
+      supplier TEXT NOT NULL DEFAULT '',
+      location TEXT NOT NULL DEFAULT '',
+      received_at INTEGER NOT NULL,
+      note TEXT NOT NULL DEFAULT '')''');
+    await d.execute('''CREATE TABLE IF NOT EXISTS pharmacy_sales(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      receipt_number TEXT NOT NULL UNIQUE,
+      created_at INTEGER NOT NULL,
+      subtotal REAL NOT NULL,
+      discount REAL NOT NULL DEFAULT 0,
+      total REAL NOT NULL,
+      paid REAL NOT NULL DEFAULT 0,
+      payment_method TEXT NOT NULL DEFAULT 'cash',
+      customer TEXT NOT NULL DEFAULT '',
+      cashier TEXT NOT NULL DEFAULT '',
+      note TEXT NOT NULL DEFAULT '')''');
+    await d.execute('''CREATE TABLE IF NOT EXISTS pharmacy_sale_items(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sale_id INTEGER NOT NULL REFERENCES pharmacy_sales(id) ON DELETE CASCADE,
+      batch_id INTEGER NOT NULL REFERENCES pharmacy_stock_batches(id),
+      product_id INTEGER NOT NULL,
+      generic_name TEXT NOT NULL,
+      brand_name TEXT NOT NULL,
+      strength TEXT NOT NULL DEFAULT '',
+      dosage_form TEXT NOT NULL DEFAULT '',
+      batch_number TEXT NOT NULL,
+      quantity INTEGER NOT NULL CHECK(quantity > 0),
+      unit_price REAL NOT NULL,
+      unit_cost REAL NOT NULL,
+      line_total REAL NOT NULL)''');
+    await d.execute('''CREATE TABLE IF NOT EXISTS pharmacy_stock_movements(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      batch_id INTEGER NOT NULL REFERENCES pharmacy_stock_batches(id),
+      kind TEXT NOT NULL,
+      quantity_delta INTEGER NOT NULL,
+      reference TEXT NOT NULL DEFAULT '',
+      reason TEXT NOT NULL DEFAULT '',
+      created_at INTEGER NOT NULL)''');
+    await d.execute('CREATE INDEX IF NOT EXISTS idx_pharmacy_stock_product ON pharmacy_stock_batches(product_id, quantity)');
+    await d.execute('CREATE INDEX IF NOT EXISTS idx_pharmacy_stock_expiry ON pharmacy_stock_batches(expiry_at, quantity)');
+    await d.execute('CREATE INDEX IF NOT EXISTS idx_pharmacy_sales_created ON pharmacy_sales(created_at DESC)');
+    await d.execute('CREATE INDEX IF NOT EXISTS idx_pharmacy_sale_items_sale ON pharmacy_sale_items(sale_id)');
   }
 
   /// Seed the small curated catalog first; the optional RxNorm import may run
@@ -277,8 +336,17 @@ class DBHelper {
       .update('generics', g.toMap(), where: 'id=?', whereArgs: [g.id]);
   Future<void> deleteGeneric(int id) async {
     final d = await db;
-    await d.delete('products', where: 'generic_id=?', whereArgs: [id]);
-    await d.delete('generics', where: 'id=?', whereArgs: [id]);
+    final linkedStock = Sqflite.firstIntValue(await d.rawQuery('''
+      SELECT COUNT(*) FROM pharmacy_stock_batches b
+      JOIN products p ON p.id=b.product_id WHERE p.generic_id=?
+    ''', [id])) ?? 0;
+    if (linkedStock > 0) {
+      throw StateError('Cannot delete this medicine: pharmacy inventory or sales history is linked to it.');
+    }
+    await d.transaction((txn) async {
+      await txn.delete('products', where: 'generic_id=?', whereArgs: [id]);
+      await txn.delete('generics', where: 'id=?', whereArgs: [id]);
+    });
   }
 
   // ---------- Products ----------
@@ -297,8 +365,15 @@ class DBHelper {
       (ex ?? await db).insert('products', t.toMap()..remove('id'));
   Future<void> updateTrade(TradeProduct t) async => (await db)
       .update('products', t.toMap(), where: 'id=?', whereArgs: [t.id]);
-  Future<void> deleteTrade(int id) async =>
-      (await db).delete('products', where: 'id=?', whereArgs: [id]);
+  Future<void> deleteTrade(int id) async {
+    final d = await db;
+    final linkedStock = Sqflite.firstIntValue(await d.query('pharmacy_stock_batches',
+        columns: ['COUNT(*) AS c'], where: 'product_id=?', whereArgs: [id])) ?? 0;
+    if (linkedStock > 0) {
+      throw StateError('Cannot delete this product: inventory/sales audit history is linked to it.');
+    }
+    await d.delete('products', where: 'id=?', whereArgs: [id]);
+  }
 
   // ---------- Favorites ----------
   Future<Set<int>> favorites() async {
@@ -378,6 +453,13 @@ class DBHelper {
 
   Future<void> resetAll() async {
     final d = await db;
+    final operationalRows = Sqflite.firstIntValue(await d.rawQuery('''
+      SELECT (SELECT COUNT(*) FROM pharmacy_stock_batches) +
+             (SELECT COUNT(*) FROM pharmacy_sales)
+    ''')) ?? 0;
+    if (operationalRows > 0) {
+      throw StateError('Reset blocked: pharmacy stock or sales history exists. Export/secure business data before resetting the reference catalogue.');
+    }
     await d.delete('products');
     await d.delete('generics');
     await d.delete('favorites');

@@ -15,6 +15,7 @@ import '../services/sync_service.dart';
 import '../widgets/drug_image.dart';
 import 'add_drug_screen.dart';
 import 'drug_detail_screen.dart';
+import 'pharmacy_screen.dart';
 import 'settings_screen.dart';
 
 const _sysIcons = <String, IconData>{
@@ -890,6 +891,17 @@ class _MoreTabState extends State<_MoreTab> {
                 onPressed: () => OnlineService.openUrl('mailto:$kEmail')),
           ]),
         ]))),
+      Card(child: ListTile(
+        leading: const CircleAvatar(backgroundColor: Color(0xFF14C8B4),
+            child: Icon(Icons.local_pharmacy, color: Color(0xFF04222B))),
+        title: Text(S.t('Pharmacy operations', 'إدارة الصيدلية'),
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(S.t('Stock batches, expiry alerts, point of sale and receipts',
+            'دفعات المخزون وتنبيهات الصلاحية ونقطة البيع والفواتير')),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const PharmacyScreen())),
+      )),
       Card(child: Column(children: [
         ListTile(leading: const Icon(Icons.language),
             title: Text(S.t('Language: English / العربية', 'اللغة: العربية / English')),
@@ -919,8 +931,8 @@ class _MoreTabState extends State<_MoreTab> {
         ListTile(leading: const Icon(Icons.smart_toy, color: Color(0xFF14C8B4)),
             title: Text(S.t('AI assistant settings (Gemini / OpenAI)',
                 'إعدادات المساعد الذكي (Gemini / OpenAI)')),
-            subtitle: Text(S.t('Provider now: ${AppSettings.activeProvider} — tap to add or change keys',
-                'المزوّد الحالي: ${AppSettings.activeProvider} — اضغط لإضافة أو تغيير المفاتيح')),
+            subtitle: Text(S.t('Provider: ${AppSettings.activeProvider} — configure the secure Worker URL',
+                'المزوّد: ${AppSettings.activeProvider} — اضبط رابط وسيط AI الآمن')),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const SettingsScreen()))),
@@ -965,15 +977,20 @@ class _MoreTabState extends State<_MoreTab> {
             onTap: () async {
               final ok = await showDialog<bool>(context: context, builder: (_) => AlertDialog(
                 title: Text(S.t('Reset?', 'استعادة؟')),
-                content: Text(S.t('Local edits will be removed and APH starter DB restored.',
-                    'ستُحذف تعديلاتك المحلية وتعود قاعدة APH الافتراضية.')),
+                content: Text(S.t('Catalogue edits will be removed. Pharmacy stock and sales are protected and will block reset.',
+                    'ستُحذف تعديلات قاعدة الأدوية؛ المخزون والمبيعات محمية وستمنع الاستعادة.')),
                 actions: [
                   TextButton(onPressed: () => Navigator.pop(context, false), child: Text(S.t('Cancel', 'إلغاء'))),
                   TextButton(onPressed: () => Navigator.pop(context, true), child: Text(S.t('Reset', 'استعادة'))),
                 ]));
               if (ok == true) {
-                await DBHelper.instance.resetAll();
-                _loadStats();
+                try {
+                  await DBHelper.instance.resetAll();
+                  _loadStats();
+                } catch (e) {
+                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(e.toString())));
+                }
               }
             }),
       ])),

@@ -110,8 +110,13 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
             label: Text(S.t('Delete this drug', 'حذف هذا الدواء'),
                 style: const TextStyle(color: Colors.redAccent)),
             onPressed: () async {
-              await DBHelper.instance.deleteGeneric(widget.edit!.id!);
-              if (mounted) Navigator.pop(context, true);
+              try {
+                await DBHelper.instance.deleteGeneric(widget.edit!.id!);
+                if (mounted) Navigator.pop(context, true);
+              } catch (e) {
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(e.toString())));
+              }
             }),
         ],
       ]),

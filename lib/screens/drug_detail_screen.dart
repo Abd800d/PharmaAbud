@@ -283,7 +283,10 @@ class _DrugDetailScreenState extends State<DrugDetailScreen> {
                           }
                           if (v == 'photo') _changeImage(product: p);
                           if (v == 'del') {
-                            DBHelper.instance.deleteTrade(p.id!).then((_) => _load());
+                            DBHelper.instance.deleteTrade(p.id!).then((_) => _load()).catchError((Object e) {
+                              if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(e.toString())));
+                            });
                           }
                         },
                         itemBuilder: (_) => [
