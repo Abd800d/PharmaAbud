@@ -56,28 +56,37 @@ jobs:
       - name: Verify seed database integrity
         run: python3 tools/verify_seed.py
 
-      # مفاتيح الذكاء الاصطناعي تُحقن وقت البناء من أسرار المستودع (لا تُكتب في الكود):
-      #   APH_GEMINI_KEY  (Google AI Studio)   APH_OPENAI_KEY  (OpenAI)
-      # وإن لم تُضف، يدخلها المستخدم من شاشة الإعدادات وتُحفظ على جهازه.
+      - name: Test SQLite fresh and legacy migrations
+        run: python3 tools/test_db_migrations.py
+
+      - name: Validate public AI proxy URL
+        run: python3 tools/validate_ai_proxy.py
+        env:
+          APH_AI_PROXY: ${{ vars.APH_AI_PROXY }}
+
+      - name: Test secure AI Worker
+        run: node tools/test_ai_worker.mjs
+
+      - name: Test APH data sync Worker
+        run: node tools/test_data_worker.mjs
+
+      # Only the public Worker URL may be passed to the APK. Provider secrets
+      # stay in Cloudflare Worker Secrets and are never present in GitHub.
       - name: Build release APK (universal)
         run: |
           set -o pipefail
           flutter build apk --release \
-            --dart-define=APH_GEMINI_KEY="${APH_GEMINI_KEY}" \
-            --dart-define=APH_OPENAI_KEY="${APH_OPENAI_KEY}" 2>&1 | tee build-log.txt
+            --dart-define=APH_AI_PROXY="${APH_AI_PROXY}" 2>&1 | tee build-log.txt
         env:
-          APH_GEMINI_KEY: ${{ secrets.APH_GEMINI_KEY }}
-          APH_OPENAI_KEY: ${{ secrets.APH_OPENAI_KEY }}
+          APH_AI_PROXY: ${{ vars.APH_AI_PROXY }}
 
       - name: Build release APK (split per ABI — smaller downloads)
         run: |
           set -o pipefail
           flutter build apk --release --split-per-abi \
-            --dart-define=APH_GEMINI_KEY="${APH_GEMINI_KEY}" \
-            --dart-define=APH_OPENAI_KEY="${APH_OPENAI_KEY}" 2>&1 | tee -a build-log.txt
+            --dart-define=APH_AI_PROXY="${APH_AI_PROXY}" 2>&1 | tee -a build-log.txt
         env:
-          APH_GEMINI_KEY: ${{ secrets.APH_GEMINI_KEY }}
-          APH_OPENAI_KEY: ${{ secrets.APH_OPENAI_KEY }}
+          APH_AI_PROXY: ${{ vars.APH_AI_PROXY }}
 
       - name: Publish errors as annotations
         if: always()
@@ -111,7 +120,7 @@ jobs:
 
       # رابط تحميل دائم (لا ينتهي مثل artifacts الخاصة بـ CI)
       - name: Publish APK to GitHub Release (apk-latest)
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: |
           VER=$(grep '^version:' pubspec.yaml | awk '{print $2}')
           NOTES="AbdulmajeedPharma (APH) build ${VER} from ${GITHUB_REF_NAME} @ ${GITHUB_SHA::7}. Owner: Dr. Abdulmajeed Abdullah Almakhedhi. Support: WhatsApp 967781733795 - 7a8b1d@gmail.com. Install: allow unknown sources, then open AbdulmajeedPharma-APH-arm64-v8a.apk (modern phones) or the universal APK."

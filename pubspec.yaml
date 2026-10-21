@@ -1,7 +1,7 @@
 name: pharma_encyclopedia
 description: "AbdulmajeedPharma (APH) — موسوعة الأدوية اليمنية والعربية | Dr. Abdulmajeed Abdullah Almakhedhi"
 publish_to: 'none'
-version: 4.0.0+4
+version: 5.0.0+6
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -31,4 +31,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/data/drugs_seed.json
+    - assets/data/rxnorm_catalog.json
+    - assets/data/rxnorm_catalog_meta.json
     - assets/images/

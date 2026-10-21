@@ -18,86 +18,315 @@ class DBHelper {
 
   Future<Database> _open() async {
     final path = p.join(await getDatabasesPath(), 'abdulmajeedpharma.db');
-    return openDatabase(path, version: 4, onCreate: (d, v) async {
+    return openDatabase(path, version: 7,
+        onConfigure: (d) async => d.execute('PRAGMA foreign_keys = ON'),
+        onCreate: (d, v) async {
       await d.execute('''CREATE TABLE generics(
         id INTEGER PRIMARY KEY AUTOINCREMENT, name_en TEXT NOT NULL,
         name_ar TEXT, system_id TEXT, subgroup_en TEXT, subgroup_ar TEXT,
         atc_code TEXT, introduction TEXT, mechanism TEXT, indications TEXT,
         dosage TEXT, interactions TEXT, warnings TEXT, pregnancy TEXT,
-        image_path TEXT, source TEXT)''');
+        image_path TEXT, source TEXT, is_archived INTEGER NOT NULL DEFAULT 0)''');
       await d.execute('''CREATE TABLE products(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         generic_id INTEGER NOT NULL REFERENCES generics(id) ON DELETE CASCADE,
         brand_name TEXT NOT NULL, manufacturer TEXT, country TEXT,
         strength TEXT, dosage_form TEXT, agent_yemen TEXT,
-        image_path TEXT, source TEXT, verified INTEGER DEFAULT 0)''');
+        image_path TEXT, source TEXT, verified INTEGER DEFAULT 0,
+        is_archived INTEGER NOT NULL DEFAULT 0)''');
+      await d.execute('CREATE INDEX idx_generics_archive_name ON generics(is_archived, name_en)');
+      await d.execute('CREATE INDEX idx_products_archive_generic ON products(is_archived, generic_id)');
       await d.execute('''CREATE TABLE messages(
         id INTEGER PRIMARY KEY AUTOINCREMENT, author TEXT, body TEXT,
         is_admin INTEGER DEFAULT 0, created_at INTEGER, source_id TEXT)''');
       await d.execute('CREATE TABLE favorites(generic_id INTEGER PRIMARY KEY)');
+      await d.execute('''CREATE TABLE aph_meta(
+        key TEXT PRIMARY KEY, value TEXT NOT NULL)''');
+      await _createPharmacyTables(d);
     }, onUpgrade: (d, oldV, newV) async {
-      if (oldV < 3) {
-        await d.execute('DROP TABLE IF EXISTS messages');
+      // Upgrade legacy message tables additively; never drop user/admin messages.
+      final messageTable = await d.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='messages'");
+      if (messageTable.isEmpty) {
         await d.execute('''CREATE TABLE messages(
           id INTEGER PRIMARY KEY AUTOINCREMENT, author TEXT, body TEXT,
           is_admin INTEGER DEFAULT 0, created_at INTEGER, source_id TEXT)''');
-        await d.execute(
-            'CREATE TABLE IF NOT EXISTS favorites(generic_id INTEGER PRIMARY KEY)');
-      } else if (oldV < 4) {
-        // إضافة معرّف الرسائل القادمة من لوحة التحكم (لمزامنة إعلانات الإدارة)
-        await d.execute('ALTER TABLE messages ADD COLUMN source_id TEXT');
+      } else {
+        final info = await d.rawQuery('PRAGMA table_info(messages)');
+        final columns = info.map((row) => row['name'].toString()).toSet();
+        const additions = <String, String>{
+          'author': 'TEXT',
+          'body': 'TEXT',
+          'is_admin': 'INTEGER DEFAULT 0',
+          'created_at': 'INTEGER',
+          'source_id': 'TEXT',
+        };
+        for (final entry in additions.entries) {
+          if (!columns.contains(entry.key)) {
+            await d.execute('ALTER TABLE messages ADD COLUMN ${entry.key} ${entry.value}');
+          }
+        }
       }
+      await d.execute(
+          'CREATE TABLE IF NOT EXISTS favorites(generic_id INTEGER PRIMARY KEY)');
+      if (oldV < 5) {
+        await d.execute('''CREATE TABLE IF NOT EXISTS aph_meta(
+          key TEXT PRIMARY KEY, value TEXT NOT NULL)''');
+      }
+      if (oldV < 6) await _createPharmacyTables(d);
+      if (oldV < 7) {
+        await d.execute('ALTER TABLE generics ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0');
+        await d.execute('ALTER TABLE products ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0');
+      }
+      await d.execute('CREATE INDEX IF NOT EXISTS idx_generics_archive_name ON generics(is_archived, name_en)');
+      await d.execute('CREATE INDEX IF NOT EXISTS idx_products_archive_generic ON products(is_archived, generic_id)');
     });
   }
 
-  /// زراعة أولية من ملف JSON الحقيقي (مرة واحدة فقط)
-  Future<void> seedIfEmpty() async {
+  static Future<void> _createPharmacyTables(DatabaseExecutor d) async {
+    await d.execute('''CREATE TABLE IF NOT EXISTS pharmacy_stock_batches(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
+      batch_number TEXT NOT NULL,
+      barcode TEXT NOT NULL DEFAULT '',
+      quantity INTEGER NOT NULL CHECK(quantity >= 0),
+      minimum_stock INTEGER NOT NULL DEFAULT 5 CHECK(minimum_stock >= 0),
+      purchase_price REAL NOT NULL DEFAULT 0 CHECK(purchase_price >= 0),
+      sale_price REAL NOT NULL DEFAULT 0 CHECK(sale_price >= 0),
+      expiry_at INTEGER NOT NULL,
+      supplier TEXT NOT NULL DEFAULT '',
+      location TEXT NOT NULL DEFAULT '',
+      received_at INTEGER NOT NULL,
+      note TEXT NOT NULL DEFAULT '')''');
+    await d.execute('''CREATE TABLE IF NOT EXISTS pharmacy_sales(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      receipt_number TEXT NOT NULL UNIQUE,
+      created_at INTEGER NOT NULL,
+      subtotal REAL NOT NULL,
+      discount REAL NOT NULL DEFAULT 0,
+      total REAL NOT NULL,
+      paid REAL NOT NULL DEFAULT 0,
+      payment_method TEXT NOT NULL DEFAULT 'cash',
+      customer TEXT NOT NULL DEFAULT '',
+      cashier TEXT NOT NULL DEFAULT '',
+      note TEXT NOT NULL DEFAULT '')''');
+    await d.execute('''CREATE TABLE IF NOT EXISTS pharmacy_sale_items(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sale_id INTEGER NOT NULL REFERENCES pharmacy_sales(id) ON DELETE CASCADE,
+      batch_id INTEGER NOT NULL REFERENCES pharmacy_stock_batches(id),
+      product_id INTEGER NOT NULL,
+      generic_name TEXT NOT NULL,
+      brand_name TEXT NOT NULL,
+      strength TEXT NOT NULL DEFAULT '',
+      dosage_form TEXT NOT NULL DEFAULT '',
+      batch_number TEXT NOT NULL,
+      quantity INTEGER NOT NULL CHECK(quantity > 0),
+      unit_price REAL NOT NULL,
+      unit_cost REAL NOT NULL,
+      line_total REAL NOT NULL)''');
+    await d.execute('''CREATE TABLE IF NOT EXISTS pharmacy_stock_movements(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      batch_id INTEGER NOT NULL REFERENCES pharmacy_stock_batches(id),
+      kind TEXT NOT NULL,
+      quantity_delta INTEGER NOT NULL,
+      reference TEXT NOT NULL DEFAULT '',
+      reason TEXT NOT NULL DEFAULT '',
+      created_at INTEGER NOT NULL)''');
+    await d.execute('CREATE INDEX IF NOT EXISTS idx_pharmacy_stock_product ON pharmacy_stock_batches(product_id, quantity)');
+    await d.execute('CREATE INDEX IF NOT EXISTS idx_pharmacy_stock_expiry ON pharmacy_stock_batches(expiry_at, quantity)');
+    await d.execute('CREATE INDEX IF NOT EXISTS idx_pharmacy_sales_created ON pharmacy_sales(created_at DESC)');
+    await d.execute('CREATE INDEX IF NOT EXISTS idx_pharmacy_sale_items_sale ON pharmacy_sale_items(sale_id)');
+  }
+
+  /// Seed the small curated catalog first; the optional RxNorm import may run
+  /// after the screen opens so a large first install never looks frozen.
+  static String lastSeedError = '';
+  static int lastSeedCount = 0;
+  Future<void> seedIfEmpty({bool includeLargeCatalog = true}) async {
+    try {
+      await _seed(includeLargeCatalog: includeLargeCatalog);
+    } catch (e) {
+      lastSeedError = e.toString();
+      try {
+        lastSeedCount = await countGenerics();
+      } catch (_) {
+        lastSeedCount = 0;
+      }
+    }
+  }
+
+  Future<void> _seed({required bool includeLargeCatalog}) async {
     final d = await db;
-    final c = Sqflite.firstIntValue(
-        await d.rawQuery('SELECT COUNT(*) FROM generics'));
-    if (c != null && c > 0) return;
+    final count = Sqflite.firstIntValue(
+        await d.rawQuery('SELECT COUNT(*) FROM generics')) ?? 0;
+    if (count > 0) {
+      lastSeedError = '';
+      if (includeLargeCatalog) await ensureLargeCatalog();
+      lastSeedCount = await countGenerics();
+      return;
+    }
+    await d.execute('''CREATE TABLE IF NOT EXISTS aph_meta(
+      key TEXT PRIMARY KEY, value TEXT NOT NULL)''');
+    // A cleared core DB must also clear the import marker.
+    await d.delete('aph_meta', where: 'key=?', whereArgs: ['rxnorm_snapshot']);
     final raw = await rootBundle.loadString('assets/data/drugs_seed.json');
     final data = jsonDecode(raw) as Map<String, dynamic>;
-    final drugs = (data['drugs'] as List).cast<Map<String, dynamic>>();
+    final drugs = (data['drugs'] as List? ?? const []).cast<Map<String, dynamic>>();
     await d.transaction((txn) async {
+      final batch = txn.batch();
       for (final g in drugs) {
         final gid = await txn.insert('generics', {
           'name_en': g['genericEn'] ?? '', 'name_ar': g['genericAr'] ?? '',
           'system_id': g['systemId'] ?? 'misc',
           'subgroup_en': g['subgroupEn'] ?? 'General',
           'subgroup_ar': g['subgroupAr'] ?? 'عام', 'atc_code': g['atc'] ?? '',
-          'introduction': g['introduction'] ?? '',
-          'mechanism': g['mechanism'] ?? '',
+          'introduction': g['introduction'] ?? '', 'mechanism': g['mechanism'] ?? '',
           'indications': g['indications'] ?? '', 'dosage': g['dosage'] ?? '',
-          'interactions': g['interactions'] ?? '',
-          'warnings': g['warnings'] ?? '', 'pregnancy': g['pregnancy'] ?? '',
-          'image_path': g['image'] ?? '', 'source': g['source'] ?? 'APH seed',
+          'interactions': g['interactions'] ?? '', 'warnings': g['warnings'] ?? '',
+          'pregnancy': g['pregnancy'] ?? '', 'image_path': g['image'] ?? '',
+          'source': g['source'] ?? 'APH seed',
         });
-        for (final pr in (g['products'] as List? ?? [])) {
+        for (final pr in (g['products'] as List? ?? const [])) {
           final pm = (pr as Map).cast<String, dynamic>();
-          await txn.insert('products', {
+          batch.insert('products', {
             'generic_id': gid, 'brand_name': pm['brand'] ?? '',
-            'manufacturer': pm['manufacturer'] ?? '',
-            'country': pm['country'] ?? '', 'strength': pm['strength'] ?? '',
-            'dosage_form': pm['form'] ?? '',
-            'agent_yemen': pm['agentYemen'] ?? '',
-            'image_path': pm['image'] ?? '', 'source': pm['source'] ?? '',
+            'manufacturer': pm['manufacturer'] ?? '', 'country': pm['country'] ?? '',
+            'strength': pm['strength'] ?? '', 'dosage_form': pm['form'] ?? '',
+            'agent_yemen': pm['agentYemen'] ?? '', 'image_path': pm['image'] ?? '',
+            'source': pm['source'] ?? '',
             'verified': (pm['verified'] == true) ? 1 : 0,
           });
         }
       }
+      await batch.commit(noResult: true);
     });
+    if (includeLargeCatalog) await ensureLargeCatalog();
+    lastSeedCount = await countGenerics();
+    lastSeedError = '';
+  }
+
+  Future<void>? _catalogImport;
+  Future<void> ensureLargeCatalog() {
+    final active = _catalogImport;
+    if (active != null) return active;
+    final future = _loadLargeCatalog();
+    _catalogImport = future;
+    return future.whenComplete(() {
+      if (identical(_catalogImport, future)) _catalogImport = null;
+    });
+  }
+
+  Future<void> _loadLargeCatalog() async {
+    await _ensureRxNormCatalog();
+    lastSeedCount = await countGenerics();
+    lastSeedError = '';
+  }
+
+  Future<void> _ensureRxNormCatalog() async {
+    final d = await db;
+    await d.execute('''CREATE TABLE IF NOT EXISTS aph_meta(
+      key TEXT PRIMARY KEY, value TEXT NOT NULL)''');
+    final meta = jsonDecode(await rootBundle.loadString(
+        'assets/data/rxnorm_catalog_meta.json')) as Map<String, dynamic>;
+    final snapshot = (meta['snapshot'] ?? 'unknown').toString();
+    final marker = await d.query('aph_meta', columns: ['value'],
+        where: 'key=?', whereArgs: ['rxnorm_snapshot'], limit: 1);
+    if (marker.isNotEmpty && marker.first['value'] == snapshot) return;
+
+    final catalog = jsonDecode(await rootBundle.loadString(
+        'assets/data/rxnorm_catalog.json')) as Map<String, dynamic>;
+    if (catalog['snapshot'] != snapshot) {
+      throw StateError('RxNorm catalogue and metadata snapshots differ');
+    }
+    final sourceNote = 'NLM RxNorm $snapshot; names only, not clinical guidance; '
+        'classification is unreviewed.';
+    await d.transaction((txn) async {
+      final nameRows = await txn.query('generics', columns: ['id', 'name_en']);
+      final ids = <String, int>{};
+      for (final row in nameRows) {
+        final name = (row['name_en'] ?? '').toString().trim().toLowerCase();
+        if (name.isNotEmpty) ids.putIfAbsent(name, () => row['id'] as int);
+      }
+      final productRows = await txn.query('products', columns: [
+        'generic_id', 'brand_name', 'strength', 'dosage_form'
+      ]);
+      final maxId = Sqflite.firstIntValue(
+              await txn.rawQuery('SELECT COALESCE(MAX(id),0) FROM generics')) ?? 0;
+      var nextId = maxId;
+      var batch = txn.batch();
+      var pending = 0;
+      String productKey(int id, String brand, String strength, String form) =>
+          '$id|${brand.trim().toLowerCase()}|${strength.trim().toLowerCase()}|${form.trim().toLowerCase()}';
+      final existingProducts = <String>{};
+      for (final row in productRows) {
+        existingProducts.add(productKey(row['generic_id'] as int,
+            (row['brand_name'] ?? '').toString(), (row['strength'] ?? '').toString(),
+            (row['dosage_form'] ?? '').toString()));
+      }
+      Future<void> flush() async {
+        if (pending < 500) return;
+        await batch.commit(noResult: true);
+        batch = txn.batch();
+        pending = 0;
+      }
+      for (final rawDrug in (catalog['drugs'] as List? ?? const [])) {
+        if (rawDrug is! Map) continue;
+        final drug = rawDrug.cast<String, dynamic>();
+        final name = (drug['genericEn'] ?? '').toString().trim();
+        if (name.isEmpty) continue;
+        final normalized = name.toLowerCase();
+        var genericId = ids[normalized];
+        if (genericId == null) {
+          genericId = ++nextId;
+          final isCombo = drug['kind'] == 'combination';
+          batch.insert('generics', {
+            'id': genericId, 'name_en': name, 'name_ar': '', 'system_id': 'misc',
+            'subgroup_en': isCombo ? 'RxNorm combination — review classification' : 'RxNorm ingredient — review classification',
+            'subgroup_ar': isCombo ? 'تركيبة RxNorm — بحاجة إلى مراجعة التصنيف' : 'مادة RxNorm — بحاجة إلى مراجعة التصنيف',
+            'atc_code': '', 'introduction': '', 'mechanism': '', 'indications': '',
+            'dosage': '', 'interactions': '', 'warnings': '', 'pregnancy': '',
+            'image_path': '', 'source': sourceNote,
+          });
+          ids[normalized] = genericId;
+          pending++;
+          await flush();
+        }
+        for (final rawProduct in (drug['products'] as List? ?? const [])) {
+          if (rawProduct is! Map) continue;
+          final product = rawProduct.cast<String, dynamic>();
+          final brand = (product['brand'] ?? '').toString().trim();
+          if (brand.isEmpty) continue;
+          final strength = (product['strength'] ?? '').toString().trim();
+          final form = (product['form'] ?? '').toString().trim();
+          if (!existingProducts.add(productKey(genericId, brand, strength, form))) continue;
+          batch.insert('products', {
+            'generic_id': genericId, 'brand_name': brand, 'manufacturer': '',
+            'country': '', 'strength': strength, 'dosage_form': form,
+            'agent_yemen': '', 'image_path': '',
+            'source': 'NLM RxNorm $snapshot; brand/form terminology only; '
+                'manufacturer, country and Yemen agent not supplied.',
+            'verified': 0,
+          });
+          pending++;
+          await flush();
+        }
+      }
+      if (pending > 0) await batch.commit(noResult: true);
+    });
+    await d.insert('aph_meta', {'key': 'rxnorm_snapshot', 'value': snapshot},
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   // ---------- Generics ----------
   Future<List<GenericDrug>> allGenerics() async {
-    final rows = await (await db).query('generics', orderBy: 'name_en');
+    final rows = await (await db).query('generics',
+        where: 'is_archived=0', orderBy: 'name_en');
     return rows.map(GenericDrug.fromMap).toList();
   }
 
   Future<List<GenericDrug>> bySystem(String systemId) async {
     final rows = await (await db)
-        .query('generics', where: 'system_id=?', whereArgs: [systemId],
+        .query('generics', where: 'system_id=? AND is_archived=0', whereArgs: [systemId],
             orderBy: 'subgroup_en, name_en');
     return rows.map(GenericDrug.fromMap).toList();
   }
@@ -117,19 +346,35 @@ class DBHelper {
       .update('generics', g.toMap(), where: 'id=?', whereArgs: [g.id]);
   Future<void> deleteGeneric(int id) async {
     final d = await db;
-    await d.delete('products', where: 'generic_id=?', whereArgs: [id]);
-    await d.delete('generics', where: 'id=?', whereArgs: [id]);
+    final linkedStock = Sqflite.firstIntValue(await d.rawQuery('''
+      SELECT COUNT(*) FROM pharmacy_stock_batches b
+      JOIN products p ON p.id=b.product_id WHERE p.generic_id=?
+    ''', [id])) ?? 0;
+    if (linkedStock > 0) {
+      throw StateError('Cannot delete this medicine: pharmacy inventory or sales history is linked to it.');
+    }
+    await d.transaction((txn) async {
+      await txn.delete('products', where: 'generic_id=?', whereArgs: [id]);
+      await txn.delete('generics', where: 'id=?', whereArgs: [id]);
+    });
   }
 
   // ---------- Products ----------
-  Future<List<TradeProduct>> productsOf(int genericId) async {
+  Future<List<TradeProduct>> productsOf(int genericId,
+      {bool includeArchived = false}) async {
     final rows = await (await db).query('products',
-        where: 'generic_id=?', whereArgs: [genericId], orderBy: 'brand_name');
+        where: includeArchived
+            ? 'generic_id=?'
+            : 'generic_id=? AND is_archived=0 AND generic_id IN (SELECT id FROM generics WHERE is_archived=0)',
+        whereArgs: [genericId], orderBy: 'brand_name');
     return rows.map(TradeProduct.fromMap).toList();
   }
 
   Future<List<TradeProduct>> allProducts() async {
-    final rows = await (await db).query('products', orderBy: 'brand_name');
+    final rows = await (await db).rawQuery('''
+      SELECT p.* FROM products p JOIN generics g ON g.id=p.generic_id
+      WHERE p.is_archived=0 AND g.is_archived=0 ORDER BY p.brand_name
+    ''');
     return rows.map(TradeProduct.fromMap).toList();
   }
 
@@ -137,8 +382,15 @@ class DBHelper {
       (ex ?? await db).insert('products', t.toMap()..remove('id'));
   Future<void> updateTrade(TradeProduct t) async => (await db)
       .update('products', t.toMap(), where: 'id=?', whereArgs: [t.id]);
-  Future<void> deleteTrade(int id) async =>
-      (await db).delete('products', where: 'id=?', whereArgs: [id]);
+  Future<void> deleteTrade(int id) async {
+    final d = await db;
+    final linkedStock = Sqflite.firstIntValue(await d.query('pharmacy_stock_batches',
+        columns: ['COUNT(*) AS c'], where: 'product_id=?', whereArgs: [id])) ?? 0;
+    if (linkedStock > 0) {
+      throw StateError('Cannot delete this product: inventory/sales audit history is linked to it.');
+    }
+    await d.delete('products', where: 'id=?', whereArgs: [id]);
+  }
 
   // ---------- Favorites ----------
   Future<Set<int>> favorites() async {
@@ -169,7 +421,10 @@ class DBHelper {
 
   /// كل المنتجات مجمّعة حسب الدواء (استعلام واحد بدل استعلام لكل دواء)
   Future<Map<int, List<TradeProduct>>> productsGroupedByGeneric() async {
-    final rows = await (await db).query('products', orderBy: 'brand_name');
+    final rows = await (await db).rawQuery('''
+      SELECT p.* FROM products p JOIN generics g ON g.id=p.generic_id
+      WHERE p.is_archived=0 AND g.is_archived=0 ORDER BY p.brand_name
+    ''');
     final out = <int, List<TradeProduct>>{};
     for (final r in rows) {
       final p = TradeProduct.fromMap(r);
@@ -218,6 +473,13 @@ class DBHelper {
 
   Future<void> resetAll() async {
     final d = await db;
+    final operationalRows = Sqflite.firstIntValue(await d.rawQuery('''
+      SELECT (SELECT COUNT(*) FROM pharmacy_stock_batches) +
+             (SELECT COUNT(*) FROM pharmacy_sales)
+    ''')) ?? 0;
+    if (operationalRows > 0) {
+      throw StateError('Reset blocked: pharmacy stock or sales history exists. Export/secure business data before resetting the reference catalogue.');
+    }
     await d.delete('products');
     await d.delete('generics');
     await d.delete('favorites');

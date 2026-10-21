@@ -75,7 +75,7 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
         TextField(controller: _ar, decoration: _dec(S.t('Generic name (Arabic)', 'الاسم العلمي بالعربية'))),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
-          value: _systemId, decoration: _dec(S.t('Body system', 'الجهاز / التصنيف')),
+          initialValue: _systemId, decoration: _dec(S.t('Body system', 'الجهاز / التصنيف')),
           items: kSystems.map((s) => DropdownMenuItem(
               value: s.id, child: Text(S.ar ? s.ar : s.en))).toList(),
           onChanged: (v) => setState(() => _systemId = v ?? 'misc'),
@@ -110,8 +110,13 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
             label: Text(S.t('Delete this drug', 'حذف هذا الدواء'),
                 style: const TextStyle(color: Colors.redAccent)),
             onPressed: () async {
-              await DBHelper.instance.deleteGeneric(widget.edit!.id!);
-              if (mounted) Navigator.pop(context, true);
+              try {
+                await DBHelper.instance.deleteGeneric(widget.edit!.id!);
+                if (mounted) Navigator.pop(context, true);
+              } catch (e) {
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(e.toString())));
+              }
             }),
         ],
       ]),

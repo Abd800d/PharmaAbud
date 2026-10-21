@@ -14,8 +14,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  late final TextEditingController _gemini;
-  late final TextEditingController _openai;
+  late final TextEditingController _proxy;
   late final TextEditingController _gmodel;
   late final TextEditingController _omodel;
   late final TextEditingController _url;
@@ -26,8 +25,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _gemini = TextEditingController(text: AppSettings.geminiKey.value);
-    _openai = TextEditingController(text: AppSettings.openAiKey.value);
+    _proxy = TextEditingController(text: AppSettings.aiProxyUrl.value);
     _gmodel = TextEditingController(text: AppSettings.geminiModel.value);
     _omodel = TextEditingController(text: AppSettings.openAiModel.value);
     _url = TextEditingController(text: AppSettings.syncUrl.value);
@@ -45,8 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
-    _gemini.dispose();
-    _openai.dispose();
+    _proxy.dispose();
     _gmodel.dispose();
     _omodel.dispose();
     _url.dispose();
@@ -59,18 +56,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
         .showSnackBar(SnackBar(content: Text(m), duration: const Duration(seconds: 4)));
   }
 
-  Future<void> _saveKeys() async {
-    await AppSettings.setGeminiKey(_gemini.text);
-    await AppSettings.setOpenAiKey(_openai.text);
+  Future<bool> _saveSettings() async {
+    if (!AppSettings.isSafeAiProxyUrl(_proxy.text)) {
+      _toast(S.t('Enter a public HTTPS Worker URL only. Never paste an API key.',
+          'أدخل رابط Worker عاماً يبدأ بـ HTTPS فقط. لا تلصق مفتاح API.'));
+      return false;
+    }
+    await AppSettings.setAiProxy(_proxy.text);
     await AppSettings.setGeminiModel(_gmodel.text);
     await AppSettings.setOpenAiModel(_omodel.text);
     await AppSettings.setSyncUrl(_url.text);
-    _toast(S.t('Saved on this device ✓', 'حُفظ على هذا الجهاز ✓'));
+    _toast(S.t('Settings saved. No API key is stored on this device.',
+        'حُفظت الإعدادات. لا يُخزَّن مفتاح API في هذا الجهاز.'));
     if (mounted) setState(() {});
+    return true;
   }
 
   Future<void> _test() async {
-    await _saveKeys();
+    if (!await _saveSettings()) return;
     setState(() {
       _busy = true;
       _status = S.t('Testing connection…', 'يختبر الاتصال…');
@@ -84,7 +87,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _sync() async {
-    await _saveKeys();
+    if (!await _saveSettings()) return;
     setState(() {
       _busy = true;
       _status = S.t('Downloading the published APH database…',
@@ -138,9 +141,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 6),
             Wrap(spacing: 8, runSpacing: 8, children: [
               for (final opt in const [
-                ['auto', 'Auto', 'تلقائي'],
+                ['auto', 'Auto — Gemini only', 'تلقائي — Gemini فقط'],
                 ['gemini', 'Google Gemini', 'Google Gemini'],
-                ['openai', 'OpenAI GPT', 'OpenAI GPT'],
+                ['openai', 'OpenAI GPT (may be paid)', 'OpenAI GPT (قد يكون مدفوعاً)'],
                 ['offline', 'Offline DB', 'دون إنترنت'],
               ])
                 ChoiceChip(
@@ -153,45 +156,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
             ]),
             const SizedBox(height: 10),
-            TextField(controller: _gemini, obscureText: true,
+            TextField(controller: _proxy, keyboardType: TextInputType.url,
                 decoration: InputDecoration(
-                    labelText: 'Google AI Studio (Gemini) API key',
-                    hintText: 'AIza…', border: const OutlineInputBorder())),
+                    labelText: S.t('Secure AI Worker URL (public URL only)',
+                        'رابط وسيط AI الآمن (الرابط العام فقط)'),
+                    hintText: 'https://aph-ai-proxy.example.workers.dev',
+                    helperText: S.t(
+                        'The API key belongs in Cloudflare Worker Secrets, never here or in the APK.',
+                        'مكان مفتاح API هو أسرار Cloudflare Worker فقط، وليس هنا أو داخل APK.'),
+                    border: const OutlineInputBorder())),
             const SizedBox(height: 8),
             TextField(controller: _gmodel,
                 decoration: InputDecoration(
                     labelText: S.t('Gemini model', 'نموذج Gemini'),
                     border: const OutlineInputBorder())),
-            const SizedBox(height: 12),
-            TextField(controller: _openai, obscureText: true,
-                decoration: InputDecoration(
-                    labelText: 'OpenAI API key',
-                    hintText: 'sk-…', border: const OutlineInputBorder())),
             const SizedBox(height: 8),
             TextField(controller: _omodel,
                 decoration: InputDecoration(
-                    labelText: S.t('OpenAI model', 'نموذج OpenAI'),
+                    labelText: S.t('OpenAI model (explicit choice; may cost)',
+                        'نموذج OpenAI (اختيار صريح وقد يكون مدفوعاً)'),
                     border: const OutlineInputBorder())),
             const SizedBox(height: 12),
             Wrap(spacing: 8, runSpacing: 8, children: [
               FilledButton.icon(icon: const Icon(Icons.save, size: 16),
                   label: Text(S.t('Save', 'حفظ')),
-                  onPressed: _busy ? null : _saveKeys),
+                  onPressed: _busy ? null : () async { await _saveSettings(); }),
               OutlinedButton.icon(icon: const Icon(Icons.bolt, size: 16),
                   label: Text(S.t('Test connection', 'اختبار الاتصال')),
                   onPressed: _busy ? null : _test),
-              OutlinedButton.icon(icon: const Icon(Icons.key, size: 16),
-                  label: Text(S.t('Get a free Gemini key', 'احصل على مفتاح Gemini مجاني')),
-                  onPressed: () => OnlineService.openUrl(
-                      'https://aistudio.google.com/app/apikey')),
             ]),
             const SizedBox(height: 8),
             Text(S.t(
-                '🔒 Your keys are stored on THIS device only and are never uploaded to the app '
-                'database or shared. If a key was ever sent in a chat or committed to a public '
-                'repository, revoke it and create a new one.',
-                '🔒 مفاتيحك تُحفظ على هذا الجهاز فقط ولا تُرفع لقاعدة التطبيق ولا تُشارك. '
-                'إذا أرسلت مفتاحاً في محادثة أو نشرته في مستودع عام، فألغه وأنشئ مفتاحاً جديداً.'),
+                '🔒 API keys are never entered or stored in this app. Configure GEMINI_API_KEY as a Cloudflare Worker Secret. Automatic mode uses Gemini only; its free quota can change. OpenAI is a manual choice and may be paid.',
+                '🔒 لا تُدخل مفاتيح API في التطبيق ولا تُخزَّن فيه. أضف GEMINI_API_KEY كسرّ في Cloudflare Worker. الوضع التلقائي يستخدم Gemini فقط وحصته المجانية قد تتغير. OpenAI اختيار يدوي وقد يكون مدفوعاً.'),
                 style: const TextStyle(fontSize: 11, color: Color(0xFFFDE68A), height: 1.7)),
             if (_status.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -225,6 +222,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 decoration: InputDecoration(
                     labelText: S.t('Published database URL (JSON)',
                         'رابط قاعدة البيانات المنشورة (JSON)'),
+                    helperText: S.t(
+                        'For admin sync, use the Worker URL ending in /api/v1/database',
+                        'لمزامنة لوحة الإدارة استخدم رابط Worker المنتهي بـ /api/v1/database'),
                     border: const OutlineInputBorder())),
             const SizedBox(height: 10),
             Row(children: [

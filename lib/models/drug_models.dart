@@ -36,6 +36,7 @@ class GenericDrug {
   final String nameEn, nameAr, systemId, subgroupEn, subgroupAr, atc;
   final String introduction, mechanism, indications, dosage;
   final String interactions, warnings, pregnancy, imagePath, source;
+  final bool isArchived;
 
   const GenericDrug({
     this.id,
@@ -54,6 +55,7 @@ class GenericDrug {
     this.pregnancy = '',
     this.imagePath = '',
     this.source = 'APH',
+    this.isArchived = false,
   });
 
   GenericDrug copyWith({String? imagePath}) => GenericDrug(
@@ -63,6 +65,7 @@ class GenericDrug {
         indications: indications, dosage: dosage, interactions: interactions,
         warnings: warnings, pregnancy: pregnancy,
         imagePath: imagePath ?? this.imagePath, source: source,
+        isArchived: isArchived,
       );
 
   Map<String, dynamic> toMap() => {
@@ -72,6 +75,7 @@ class GenericDrug {
         'indications': indications, 'dosage': dosage,
         'interactions': interactions, 'warnings': warnings,
         'pregnancy': pregnancy, 'image_path': imagePath, 'source': source,
+        'is_archived': isArchived ? 1 : 0,
       };
 
   factory GenericDrug.fromMap(Map<String, dynamic> m) => GenericDrug(
@@ -91,6 +95,8 @@ class GenericDrug {
         pregnancy: (m['pregnancy'] ?? '') as String,
         imagePath: (m['image_path'] ?? m['image'] ?? '') as String,
         source: (m['source'] ?? 'APH') as String,
+        isArchived: (m['is_archived'] ?? m['archived'] ?? false) == true ||
+            (m['is_archived'] ?? m['archived'] ?? 0) == 1,
       );
 }
 
@@ -101,6 +107,7 @@ class TradeProduct {
   final String brandName, manufacturer, country, strength, dosageForm;
   final String agentYemen, imagePath, source;
   final bool verified;
+  final bool isArchived;
 
   const TradeProduct({
     this.id,
@@ -114,6 +121,7 @@ class TradeProduct {
     this.imagePath = '',
     this.source = '',
     this.verified = false,
+    this.isArchived = false,
   });
 
   Map<String, dynamic> toMap() => {
@@ -122,6 +130,7 @@ class TradeProduct {
         'strength': strength, 'dosage_form': dosageForm,
         'agent_yemen': agentYemen, 'image_path': imagePath,
         'source': source, 'verified': verified ? 1 : 0,
+        'is_archived': isArchived ? 1 : 0,
       };
 
   factory TradeProduct.fromMap(Map<String, dynamic> m) => TradeProduct(
@@ -136,6 +145,8 @@ class TradeProduct {
         imagePath: (m['image_path'] ?? m['image'] ?? '') as String,
         source: (m['source'] ?? '') as String,
         verified: (m['verified'] ?? false) == true || (m['verified'] ?? 0) == 1,
+        isArchived: (m['is_archived'] ?? m['archived'] ?? false) == true ||
+            (m['is_archived'] ?? m['archived'] ?? 0) == 1,
       );
 }
 
